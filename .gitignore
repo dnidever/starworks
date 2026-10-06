@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.venv/
+.starmodel*
+starmodl_py.dat
+.streamlit/secrets.toml
