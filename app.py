@@ -87,24 +87,18 @@ if c1.button('Keep current model as comparison'):
 if c2.button('Clear comparison'):
     st.session_state.pop('reference',None)
     reference=None
-quantities=[('T','Temperature (K)'),('rho','Density (g cm⁻³)'),('P','Pressure (dyn cm⁻²)'),('m_fraction','Enclosed mass / total mass'),('l_fraction','Luminosity / total luminosity'),('epsilon','Energy generation (erg g⁻¹ s⁻¹)'),('kappa','Opacity (cm² g⁻¹)'),('dlnPdlnT','d ln P / d ln T')]
-fig=make_subplots(rows=4,cols=2,subplot_titles=[q[1] for q in quantities],vertical_spacing=0.07)
-for i,(q,label) in enumerate(quantities):
-    row,col=divmod(i,2); row+=1; col+=1
-    for model,name,color,dash in [(r,'Current','#f59e0b','solid'),(reference,'Comparison','#38bdf8','dash')]:
-        if model is None: continue
-        data=model['profile']; valid=np.isfinite(data[coord]) & np.isfinite(data[q])
-        if log and q in ['T','rho','P','epsilon','kappa']: valid &= data[q]>0
-        fig.add_trace(go.Scatter(x=data.loc[valid,coord],y=data.loc[valid,q],name=name,legendgroup=name,showlegend=i==0,line=dict(color=color,dash=dash)),row=row,col=col)
-    fig.update_xaxes(title_text=axis,row=row,col=col)
-    if log and q in ['T','rho','P','epsilon','kappa']: fig.update_yaxes(type='log',row=row,col=col)
-fig.update_layout(height=1150,margin=dict(t=55,b=30),hovermode='x unified')
-st.plotly_chart(fig,width='stretch')
-st.subheader('Energy transport')
-transport=go.Figure(go.Scatter(x=df[coord],y=(df.zone=='c').astype(int),mode='lines',line=dict(shape='hv',color='#f59e0b')))
-transport.update_layout(height=230,xaxis_title=axis,yaxis=dict(tickvals=[0,1],ticktext=['Radiative','Convective'],range=[-.1,1.1]))
-st.plotly_chart(transport,width='stretch')
-st.caption('Transport classifications come from the solver. The starting surface shells are assumed radiative. Extrapolated central points are excluded from all profile plots.')
+from plots import make_profiles, invalid_shells
+st.plotly_chart(make_profiles(r,reference,coord,axis,log),width='stretch')
+st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points are excluded.')
+if invalid_shells(df).any():
+    st.warning('Red shading and solid red lines mark shells with negative radius, mass, luminosity, opacity or energy generation; nonpositive temperature, pressure or density; or nonfinite values. These are invalid computed values, not a physical stellar region. Nonpositive values are omitted on logarithmic axes. On the mass axis, only lines are used because the coordinate can reverse in failed models.')
+if r['flag']!=0 or r['error']:
+    st.caption('The dashed red line marks the innermost finite positive-radius shell of the failed integration. A core mismatch alone does not mean the entire interior is unphysical.')
+if reference and (reference['flag']!=0 or reference['error']):
+    st.caption('The comparison is also a failed trial. Red diagnostic markers apply to the current model only.')
+st.caption('The starting surface shells are assumed radiative; transport labels come from the solver.')
+with st.expander('Advanced plots: pressure, opacity and temperature gradient'):
+    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True),width='stretch')
 with st.expander('Extrapolated core and numerical diagnostics'):
     st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are residuals, not physical point values.')
     st.json({k:r['core'][k] for k in ['T','rho','P','epsilon','M','L']})

@@ -40,3 +40,7 @@ This is a local runnable app; it has not been published to Streamlit Cloud. For 
 ## Guided adjustment tests
 
 The core explanation and residuals appear above the plots. “Test adjustment directions” runs the displayed model plus positive and negative perturbations of luminosity and temperature (default 1%). The table lists solver status, stopping radius, residuals, and changes in absolute residuals. Compare stopping radii before interpreting changes; smaller residuals alone do not establish convergence. Results are hidden when the displayed model or adjustment size changes. Numerical errors are distinguished from core boundary mismatches.
+
+## Compact plots
+
+Four default panels combine normalized temperature/density, fractional mass/luminosity, nuclear energy generation, and energy transport. Actual values are available on hover. Pressure, opacity and d ln P/d ln T are in Advanced plots. Red bands and solid lines indicate invalid computed shells; dashed red lines identify the innermost finite positive-radius shell in failed models. Markers apply to the current model. Invalid mass coordinates may reverse, so that axis uses lines only.
