@@ -18,3 +18,28 @@ def run_model(mass, luminosity, teff, x, z):
     return dict(parameters=(mass,luminosity,teff,x,z), flag=int(flag), error=int(error),
                 profile=df, core={n:table[-1][n].item() for n in table.dtype.names},
                 radius=radius, warnings=list(dict.fromkeys(str(w.message) for w in caught)))
+
+EXPLANATIONS = {
+    -1: 'The solver reached its shell limit before establishing a consistent core. This may be a numerical limitation rather than a simple mismatch in your trial parameters.',
+    0: 'The extrapolated core satisfies the solver’s density, energy generation, and temperature checks. Inspect the profiles and remaining mass and luminosity as well.',
+    1: 'The density inferred from the remaining mass and core volume is below the last shell’s density or above the solver’s allowed upper limit. The inferred core does not connect smoothly to the integrated interior.',
+    2: 'The core energy generation per unit mass inferred from remaining luminosity divided by remaining mass is lower than the last shell’s value. The core cannot connect consistently to the luminosity profile.',
+    3: 'The extrapolated central temperature is lower than the last integrated shell’s temperature. The temperature should rise toward the center in this model.',
+    4: 'Enclosed mass became negative before the center was reached. Integrating the trial density profile inward consumed more mass than the star was assigned.',
+    5: 'Luminosity became negative before the center was reached. Integrating the trial energy generation inward consumed more luminosity than the assumed surface luminosity.',
+    6: 'The integration reached or crossed zero radius with mass or luminosity still remaining. The trial surface conditions do not produce a consistent center.',
+}
+
+def diagnostics(result):
+    """Use the last finite shell at positive radius, never a core extrapolation."""
+    p = result['profile']
+    valid = (p.r > 0) & np.isfinite(p[['r_fraction','m_fraction','l_fraction']]).all(axis=1)
+    if not valid.any():
+        return {'r/R':np.nan, 'M/M★':np.nan, 'L/L★':np.nan}
+    row=p.loc[valid].iloc[0]
+    return {'r/R':float(row.r_fraction), 'M/M★':float(row.m_fraction), 'L/L★':float(row.l_fraction)}
+
+def explanation(result):
+    if result['error']:
+        return 'The numerical integration encountered an equation-of-state or intermediate integration error. The integration stopped before establishing a valid core; the condition flag alone does not establish the cause.'
+    return EXPLANATIONS.get(result['flag'], 'The solver returned an unrecognized condition flag.')

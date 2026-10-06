@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
-from model_runner import run_model, STATUS
+from model_runner import run_model, STATUS, diagnostics, explanation
 st.set_page_config(page_title='StarWorks',page_icon='☀️',layout='wide')
 st.title('StarWorks')
 st.caption('Explore homogeneous main-sequence models with STATSTAR. Adjust the surface conditions, integrate inward, and inspect the interior.')
@@ -38,10 +38,41 @@ if r['flag']==0 and r['error']==0:
     st.success(msg+'; inspect the profiles and residuals before accepting the model.')
 else:
     st.warning(f"{msg}. Integration error code: {r['error']}. Profiles show a trial model, not an accepted solution.")
-df=r['profile']; inner=df.iloc[0]
+st.markdown('**What happened in the core?**')
+st.write(explanation(r))
+st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
+df=r['profile']; inner=diagnostics(r)
 cols=st.columns(4)
-for col,label,value in zip(cols,['Radius (R☉)','Innermost r/R','Remaining M/M★','Remaining L/L★'],[r['radius']/6.9599e10,inner.r_fraction,inner.m_fraction,inner.l_fraction]):
+for col,label,value in zip(cols,['Radius (R☉)','Innermost r/R','Remaining M/M★','Remaining L/L★'],[r['radius']/6.9599e10,inner['r/R'],inner['M/M★'],inner['L/L★']]):
     col.metric(label,f'{value:.4g}')
+st.subheader('Which direction should I try?')
+st.write('Test small changes in luminosity and effective temperature while keeping mass and composition fixed. These tests use the displayed model, even if you have edited the sidebar inputs.')
+step=st.number_input('Adjustment size (%)',min_value=0.01,max_value=10.0,value=1.0,step=0.1)
+if st.button('Test adjustment directions'):
+    trials=[('Baseline',l,t),('Increase luminosity',l*(1+step/100),t),('Decrease luminosity',l*(1-step/100),t),('Increase temperature',l,t*(1+step/100)),('Decrease temperature',l,t*(1-step/100))]
+    rows=[]
+    with st.spinner('Testing nearby surface conditions…'):
+        for name,trial_l,trial_t in trials:
+            row={'Trial':name,'L (L☉)':trial_l,'Teff (K)':trial_t}
+            try:
+                trial=calculate(m,trial_l,trial_t,h,met)
+                d=diagnostics(trial)
+                row.update(d)
+                row['Status']=STATUS.get(trial['flag'],'Unknown') if not trial['error'] else 'Numerical integration error'
+                row['Integration error']=trial['error']
+                row['Δ|M/M★|']=abs(d['M/M★'])-abs(inner['M/M★'])
+                row['Δ|L/L★|']=abs(d['L/L★'])-abs(inner['L/L★'])
+            except Exception as exc:
+                row['Status']=f'Could not calculate: {exc}'
+            rows.append(row)
+    st.session_state.direction_tests={'parameters':r['parameters'],'step':step,'rows':rows}
+tests=st.session_state.get('direction_tests')
+if tests and tests['parameters']==r['parameters'] and tests['step']==step:
+    st.dataframe(pd.DataFrame(tests['rows']),hide_index=True,width='stretch')
+    st.caption('Negative Δ means a smaller absolute residual. Compare r/R first: trials that stop at different radii are not directly comparable. Even both residuals shrinking does not guarantee convergence.')
+    st.info('If a trial passes the core checks without an integration error, inspect it next. Otherwise, look for a change that improves the residuals at a similar stopping radius. Try that direction with a smaller step, change one parameter at a time, and rerun. If mass and luminosity respond in opposite ways, both surface parameters may need tuning.')
+    st.write('Physical clue: negative luminosity means the trial interior used up its luminosity too early; increasing the assumed luminosity is one experiment to test. There is no universal temperature adjustment rule because both inputs change the entire interior.')
+
 a,b=st.columns([3,1])
 with a:
     axis=st.radio('Horizontal axis',['Fractional radius','Enclosed mass fraction'],horizontal=True)

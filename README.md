@@ -36,3 +36,7 @@ The solver outputs total nuclear energy generation only; this version does not i
 * requirements.txt — dependencies
 
 This is a local runnable app; it has not been published to Streamlit Cloud. For Streamlit Community Cloud, use repository `dnidever/starworks`, branch `main`, and entry point `app.py`.
+
+## Guided adjustment tests
+
+The core explanation and residuals appear above the plots. “Test adjustment directions” runs the displayed model plus positive and negative perturbations of luminosity and temperature (default 1%). The table lists solver status, stopping radius, residuals, and changes in absolute residuals. Compare stopping radii before interpreting changes; smaller residuals alone do not establish convergence. Results are hidden when the displayed model or adjustment size changes. Numerical errors are distinguished from core boundary mismatches.
