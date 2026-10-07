@@ -69,8 +69,11 @@ for col,label,key in [(cols[2],'Remaining M/M★','M/M★'),(cols[3],'Remaining 
         direction='↓ smaller' if delta<0 else '↑ larger' if delta>0 else 'unchanged'
         color='#15803d' if delta<0 else '#b91c1c' if delta>0 else '#475569'
         change=f'<div style="font-size:14px;color:{color};margin-top:6px;">|Residual|: {direction} ({delta:+.3g}) vs previous trial</div>'
+    residual_bg='#ecfdf5' if passed else '#fef2f2'
+    residual_border='#bbf7d0' if passed else '#fecaca'
+    residual_color='#166534' if passed else '#991b1b'
     with col:
-        st.markdown(f'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;color:#991b1b;">'
+        st.markdown(f'<div style="background:{residual_bg};border:1px solid {residual_border};border-radius:8px;padding:12px;color:{residual_color};">'
                     f'<div style="font-size:14px;">{label}</div><div style="font-size:30px;font-weight:700;">{value:.5g}</div>{change}</div>',unsafe_allow_html=True)
 if comparable:
     st.caption(f"Previous trial stopped at r/R={old['r/R']:.4g}; current at {inner['r/R']:.4g}. Smaller absolute residuals alone do not establish improvement when stopping radii differ.")

@@ -47,7 +47,7 @@ Four default panels combine normalized temperature/density, fractional mass/lumi
 
 ## Grid search and zoom
 
-Open Grid search in luminosity and temperature near the top. Set ranges and sample counts (default 15×15, maximum 30×30), optionally use logarithmic luminosity spacing, and run the grid. The status map and downloadable table report solver outcomes and residuals. Select a trial and click Inspect selected grid trial to display its profiles. With a displayed model, the grid holds its mass and composition fixed. Otherwise it uses sidebar mass and composition. Narrow the bounds to refine a promising region.
+Open Grid search in luminosity and temperature near the top. Set ranges and sample counts (default 25×25, maximum 30×30), optionally use logarithmic luminosity spacing, and run the grid. The status map and downloadable table report solver outcomes and residuals. Select a trial and click Inspect selected grid trial to display its profiles. With a displayed model, the grid holds its mass and composition fixed. Otherwise it uses sidebar mass and composition. Narrow the bounds to refine a promising region.
 
 Limit x-range sets minimum and maximum coordinates for all main and advanced plots; logarithmic bounds must be positive. The artificial surface shell (index 1, maximum radius, zero temperature/pressure/density) is exempt from invalid-shell markers. Interior invalid shells remain marked.
 
