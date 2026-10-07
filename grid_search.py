@@ -46,7 +46,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                     flag=int(flag);error=int(error)
                     rows.append({'L (L☉)':trial_l,'Teff (K)':trial_t,'Accepted':flag==0 and error==0,
                                  'Flag':flag if not error else -2,'r/R':rr,'M/M★':mm,'L/L★':ll,
-                                 'Status':STATUS.get(flag,'Unknown') if not error else 'Numerical error'})
+                                 'Status':STATUS.get(flag,'Unknown') if not error else 'Unphysical pressure, temperature, or density'})
                 st.session_state.grid_generation=st.session_state.get('grid_generation',0)+1
                 st.session_state.grid_result=dict(parameters=(mass,x,z),rows=rows,ls=ls,ts=ts,log_l=log_l)
         grid=st.session_state.get('grid_result')
@@ -58,6 +58,11 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         st.write(f"{int(data.Accepted.sum())} of {len(data)} trials passed the solver core checks.")
         # Colorbar reads bottom to top; place Passed at its highest category.
         flag_order=[-2,-1,1,2,3,4,5,6,0]
+        status_labels=['Unphysical pressure, temperature, or density','Integration limit reached',
+                       'Core density outside allowed range','Core energy generation too low',
+                       'Core temperature too low','Enclosed mass became negative',
+                       'Luminosity became negative','Too much mass or luminosity near center','Passed']
+        data['Status']=data.Flag.map(dict(zip(flag_order,status_labels)))
         colors=['#64748b','#a78bfa','#eab308','#f97316','#ec4899','#dc2626','#991b1b','#2563eb','#22c55e']
         scale=[]
         for i,color in enumerate(colors):scale.extend([(i/9,color),((i+1)/9,color)])
@@ -71,7 +76,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         details=data[['Status','r/R','M/M★','L/L★']].values
         if map_quantity=='Model status':
             heatmap_options=dict(z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
-                colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed']))
+                colorbar=dict(tickvals=list(range(9)),ticktext=status_labels))
         else:
             column={'Remaining mass (M/M★)':'M/M★',
                     'Remaining luminosity (L/L★)':'L/L★',
