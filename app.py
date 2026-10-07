@@ -47,22 +47,22 @@ if submitted:
         st.error(f'Model failed: {exc}')
 st.markdown("""
 <style>
-.stTabs [data-baseweb="tab-list"] {
+.stTabs [role="tablist"] {
     gap: 12px; padding: 8px 0 14px; flex-wrap: wrap;
 }
-.stTabs [data-baseweb="tab"] {
-    height: 58px; padding: 10px 24px; border: 2px solid #64748b !important;
+.stTabs [role="tab"] {
+    height: 58px !important; padding: 10px 24px !important; border: 2px solid #64748b !important;
     border-radius: 18px !important; background: #f1f5f9 !important;
     color: #334155 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.10);
 }
-.stTabs [data-baseweb="tab"] p {
-    font-size: 20px; font-weight: 700;
+.stTabs [role="tab"], .stTabs [role="tab"] p, .stTabs [role="tab"] span {
+    font-size: 20px !important; font-weight: 700 !important;
 }
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
+.stTabs [role="tab"][aria-selected="true"] {
     background: #dbeafe !important; color: #1e3a8a !important; border: 3px solid #2563eb !important;
     box-shadow: 0 2px 5px rgba(37,99,235,0.15);
 }
-.stTabs [data-baseweb="tab"]:hover { border-color: #2563eb; }
+.stTabs [role="tab"]:hover { border-color: #2563eb; }
 .stTabs [data-baseweb="tab-highlight"] { display: none; }
 </style>
 """,unsafe_allow_html=True)
