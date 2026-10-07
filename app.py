@@ -63,7 +63,8 @@ st.markdown("""
     box-shadow: 0 2px 5px rgba(37,99,235,0.15);
 }
 .stTabs [role="tab"]:hover { border-color: #2563eb; }
-.stTabs [data-baseweb="tab-highlight"] { display: none; }
+.stTabs .react-aria-SelectionIndicator,
+.stTabs [data-baseweb="tab-highlight"] { display: none !important; }
 </style>
 """,unsafe_allow_html=True)
 model_tab,adjustment_tab,grid_tab=st.tabs(['☀️ Model','↔️ Adjustment tests','▦ Grid search'])
