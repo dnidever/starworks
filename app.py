@@ -10,14 +10,20 @@ st.caption('Explore homogeneous main-sequence models with STATSTAR. Adjust the s
 @st.cache_data(max_entries=200,show_spinner=False)
 def calculate(*pars):
     return run_model(*pars)
+for key,value in {'guess_mass':1.0,'guess_lum':0.86071,'guess_teff':5500.2,'guess_x':.70,'guess_z':.008}.items():
+    st.session_state.setdefault(key,value)
+pending=st.session_state.pop('pending_grid_guess',None)
+if pending:
+    for key,value in zip(['guess_mass','guess_lum','guess_teff','guess_x','guess_z'],pending):
+        st.session_state[key]=float(value)
 with st.sidebar:
     st.header('Model parameters')
     with st.form('parameters'):
-        mass=st.number_input('Mass (M☉)',min_value=0.1,max_value=100.0,value=1.0,step=0.1,format='%.4f')
-        lum=st.number_input('Luminosity (L☉)',min_value=0.00001,max_value=1000000.0,value=0.86071,step=0.001,format='%.5f')
-        teff=st.number_input('Effective temperature (K)',min_value=1000.0,max_value=100000.0,value=5500.2,step=1.0,format='%.1f')
-        x=st.number_input('Hydrogen mass fraction X',min_value=0.001,max_value=0.999,value=0.70,step=0.01,format='%.3f')
-        z=st.number_input('Metal mass fraction Z',min_value=0.000001,max_value=0.5,value=0.008,step=0.001,format='%.6f')
+        mass=st.number_input('Mass (M☉)',key='guess_mass',min_value=0.1,max_value=100.0,step=0.1,format='%.4f')
+        lum=st.number_input('Luminosity (L☉)',key='guess_lum',min_value=0.000001,step=0.001,format='%.5f')
+        teff=st.number_input('Effective temperature (K)',key='guess_teff',min_value=1.0,step=1.0,format='%.1f')
+        x=st.number_input('Hydrogen mass fraction X',key='guess_x',min_value=0.001,max_value=0.999,step=0.01,format='%.3f')
+        z=st.number_input('Metal mass fraction Z',key='guess_z',min_value=0.000001,max_value=0.5,step=0.001,format='%.6f')
         submitted=st.form_submit_button('Run model',type='primary')
     st.caption('Helium fraction Y = 1 − X − Z. Luminosity and temperature are trial boundary conditions, not predictions.')
     st.caption('Initial inputs reproduce the 1 M☉ trial from your notebook.')

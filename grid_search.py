@@ -45,6 +45,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                     rows.append({'L (L☉)':trial_l,'Teff (K)':trial_t,'Accepted':flag==0 and error==0,
                                  'Flag':flag if not error else -2,'r/R':rr,'M/M★':mm,'L/L★':ll,
                                  'Status':STATUS.get(flag,'Unknown') if not error else 'Numerical error'})
+                st.session_state.grid_generation=st.session_state.get('grid_generation',0)+1
                 st.session_state.grid_result=dict(parameters=(mass,x,z),rows=rows,ls=ls,ts=ts,log_l=log_l)
         grid=st.session_state.get('grid_result')
         if not grid:return
@@ -65,7 +66,23 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed'])))
         fig.update_layout(height=440,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
         if grid['log_l']:fig.update_yaxes(type='log')
-        st.plotly_chart(fig,width='stretch')
+        # Heatmaps do not expose point selection in Streamlit. A transparent
+        # scatter layer provides selectable trial centers over the same map.
+        fig.add_trace(go.Scattergl(x=data['Teff (K)'],y=data['L (L☉)'],mode='markers',
+            marker=dict(symbol='square',size=max(4,min(28,360/max(len(grid['ls']),len(grid['ts']))))),opacity=.01,
+            customdata=data.index.to_numpy(),showlegend=False,hoverinfo='skip',name='Select trial'))
+        chart_key=f"grid_map_{st.session_state.get('grid_generation',0)}"
+        def choose_grid_point():
+            event=st.session_state.get(chart_key,{})
+            points=event.get('selection',{}).get('points',[])
+            if not points:return
+            point=points[-1]
+            if point.get('curve_number')!=1:return
+            index=int(point['point_index'])
+            row=data.iloc[index]
+            st.session_state.pending_grid_guess=(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
+        st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
+        st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
         st.caption('Green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
         st.dataframe(data,hide_index=True,width='stretch')
         indices=list(data.index)
