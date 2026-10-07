@@ -2,7 +2,7 @@
 import numpy as np
 from numba import njit
 from fast_kernel import integrate
-# Kernel revision: intermediate radial step R/200 (factor-five transition).
+# Kernel revision: main radial step R/1000, core R/5000, shell limit 5000.
 @njit(cache=True,error_model='numpy')
 def grid_summary(mass,x,z,luminosities,temperatures):
     output=np.empty((len(luminosities)*len(temperatures),7))

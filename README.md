@@ -62,3 +62,7 @@ Local warm benchmark for 225 models: 4.60 s with the Python reference versus 0.0
 ## Smaller step transition
 
 The intermediate inward step is now R/200 rather than R/100: the initial R/1000 step increases by a factor of five when enclosed mass drops below 99%. The core step rule is unchanged. Both Python and Numba versions use this rule. Results can shift slightly: the initial notebook trial no longer passes the density check; a nearby passing trial is L=0.8598766667 L☉, Teff=5496.866667 K at M=1 M☉, X=0.70, Z=0.008. Earlier benchmark timings predate this step change.
+
+## Current integration spacing
+
+The main step stays at R/1000 through the surface and interior; it never increases at the 99%-mass threshold. Near the center, the existing half-remaining-radius rule reduces it to R/5000. The shell limit is 5000. Both reference and compiled solvers use these settings. Earlier step-transition descriptions and timings above document prior versions. Previously accepted input parameters may need retuning with the smaller steps.
