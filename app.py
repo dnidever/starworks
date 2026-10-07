@@ -152,6 +152,17 @@ if log_x:
     st.caption('The logarithmic x-axis shows positive coordinates only; zero and negative coordinates are omitted.')
 coord='r_fraction' if axis=='Fractional radius' else 'm_fraction'
 x_range=None
+from plots import invalid_shells
+if not passed and st.toggle('Automatically zoom into failed core',value=True):
+    valid=df[(df.r>0)&~invalid_shells(df)&np.isfinite(df[coord])]
+    if log_x:valid=valid[valid[coord]>0]
+    if len(valid):
+        boundary=float(valid.iloc[0][coord])
+        maximum=min(1.0,3*boundary)
+        minimum=max(boundary*.01,1e-12) if log_x else 0.0
+        if maximum>minimum:
+            x_range=(minimum,maximum)
+            st.caption(f'Automatic core zoom: maximum {axis.lower()} = {maximum:.5g} (up to 3× the last valid shell). Turn off automatic zoom to show the full range; manual limits below override it.')
 if st.toggle('Limit x-range',value=False):
     cmin,cmax=st.columns(2)
     xmin=cmin.number_input('Minimum x',value=0.001 if log_x else 0.0,format='%.6f')

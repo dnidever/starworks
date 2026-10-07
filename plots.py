@@ -118,7 +118,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
             rho_core=current['core']['rho']
             relation='below last shell' if rho_core<rho_inner else 'above upper limit'
             fig.add_annotation(x=fig.layout.xaxis4.domain[0]+.015,
-                y=fig.layout.yaxis4.domain[1]-.025,xref='paper',yref='paper',
+                y=fig.layout.yaxis4.domain[0]+.3*(fig.layout.yaxis4.domain[1]-fig.layout.yaxis4.domain[0]),xref='paper',yref='paper',
                 text=f'Core density mismatch: {rho_core:.4g} g/cm³ ({relation})<br>Allowed: {rho_inner:.4g} to {rho_max:.4g} g/cm³',
                 showarrow=False,xanchor='left',yanchor='top',font=dict(color='#b91c1c',size=11),
                 bgcolor='rgba(255,240,240,0.9)')
