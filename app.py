@@ -67,7 +67,9 @@ st.markdown("""
 .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
 </style>
 """,unsafe_allow_html=True)
-model_tab,adjustment_tab,grid_tab=st.tabs(['☀️ Model','↔️ Adjustment tests','▦ Grid search'])
+if st.session_state.pop('switch_to_model_tab',False):
+    st.session_state.workflow_tab='☀️ Model'
+model_tab,adjustment_tab,grid_tab=st.tabs(['☀️ Model','↔️ Adjustment tests','▦ Grid search'],key='workflow_tab',on_change='rerun')
 from grid_search import grid_search_ui
 with grid_tab:
     grid_search_ui(calculate,(mass,x,z),st.session_state.get('current'))

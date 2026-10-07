@@ -103,6 +103,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                 st.session_state.previous_trial=st.session_state.get('current')
                 st.session_state.current=result
                 st.session_state.pending_grid_guess=result['parameters']
+                st.session_state.switch_to_model_tab=True
                 st.rerun()
         else:
             st.info('No trials passed the core checks in this grid. Adjust the bounds or refine the grid and search again.')
@@ -116,6 +117,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                 result=calculate(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
                 st.session_state.previous_trial=st.session_state.get('current')
                 st.session_state.current=result
+                st.session_state.switch_to_model_tab=True
                 st.rerun()
             except Exception as exc:st.error(f'Could not inspect trial: {exc}')
         st.download_button('Download grid results (CSV)',data.to_csv(index=False),'starworks_grid.csv','text/csv')
