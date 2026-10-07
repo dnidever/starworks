@@ -62,6 +62,27 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                             marker=dict(symbol='diamond-open',size=12,color=['#f59e0b','#38bdf8'][j],line=dict(width=2)),
                             name=f'{name}: extrapolated core',customdata=[raw_core],
                             hovertemplate=f'Extrapolated core: {label}=%{{customdata:.4g}} {unit}<br>{axis}=%{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+        if not advanced and i==1:
+            # Identify actual offending shell values; never invent a negative
+            # residual for a core mismatch that only concerns density or temperature.
+            data=current['profile']
+            for q,label in [('m_fraction','Mass'),('l_fraction','Luminosity')]:
+                failed=data[(data[q]<0)&np.isfinite(data[q])&np.isfinite(data[coord])]
+                if log_x: failed=failed[failed[coord]>0]
+                if len(failed):
+                    point=failed.iloc[0]
+                    fig.add_trace(go.Scatter(x=[point[coord]],y=[point[q]],mode='markers',
+                        name=f'{label} became negative',legend='legend2',
+                        marker=dict(size=14,color='red',symbol='circle',line=dict(color='white',width=1)),
+                        hovertemplate=f'{label} became negative<br>{axis}=%{{x:.5g}}<br>Fraction=%{{y:.5g}}<extra>Invalid shell</extra>'),row=row,col=col)
+                elif show_core and current['flag']!=0:
+                    core=current['core']
+                    value=core['M']/(current['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(current['parameters'][1]*3.826e33)
+                    if np.isfinite(value) and value<0 and not log_x:
+                        fig.add_trace(go.Scatter(x=[0],y=[value],mode='markers',
+                            name=f'Negative extrapolated {label.lower()} residual',legend='legend2',
+                            marker=dict(size=14,color='red',line=dict(color='white',width=1)),
+                            hovertemplate=f'Negative extrapolated {label.lower()} residual: %{{y:.5g}}<extra>Core extrapolation</extra>'),row=row,col=col)
         # Radius bands are only meaningful with the radius axis; invalid mass coordinates
         # can fold back on themselves, so use shell markers on that axis.
         data=current['profile']; bad=invalid_shells(data); xx=data[coord].to_numpy()
