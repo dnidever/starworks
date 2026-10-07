@@ -66,7 +66,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         fig=go.Figure(go.Heatmap(x=grid['ts'].tolist(),y=grid['ls'].tolist(),z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
             customdata=data.Status.to_numpy().reshape(matrix.shape).tolist(),hovertemplate='Teff=%{x:.2f} K<br>L=%{y:.6g} L☉<br>%{customdata}<extra></extra>',
             colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed'])))
-        fig.update_layout(height=440,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
+        fig.update_layout(height=560,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
         if grid['log_l']:fig.update_yaxes(type='log')
         # Heatmaps do not expose point selection in Streamlit. A transparent
         # scatter layer provides selectable trial centers over the same map.
@@ -85,7 +85,9 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             if not 0<=index<len(data):return
             row=data.iloc[index]
             st.session_state.pending_grid_guess=(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
-        st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
+        _,map_column,_=st.columns([1,3,1])
+        with map_column:
+            st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
         st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
         st.caption('Green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
         matches=data[data.Accepted].copy()
