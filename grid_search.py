@@ -24,8 +24,8 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             high_l=b.number_input('Maximum luminosity (L☉)',min_value=.000001,value=float(center_l*1.2),format='%.6f')
             low_t=a.number_input('Minimum temperature (K)',min_value=1.0,value=float(center_t*.9))
             high_t=b.number_input('Maximum temperature (K)',min_value=1.0,value=float(center_t*1.1))
-            nl=a.number_input('Luminosity samples',min_value=3,max_value=30,value=25,step=1)
-            nt=b.number_input('Temperature samples',min_value=3,max_value=30,value=25,step=1)
+            nl=a.number_input('Luminosity samples',min_value=3,max_value=200,value=25,step=1)
+            nt=b.number_input('Temperature samples',min_value=3,max_value=200,value=25,step=1)
             log_l=st.checkbox('Logarithmic luminosity spacing',value=False)
             run=st.form_submit_button('Run grid search',type='primary')
         if run:
