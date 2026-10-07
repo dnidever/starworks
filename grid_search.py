@@ -12,10 +12,11 @@ def cached_grid(mass,x,z,ls,ts,solver_revision):
     return grid_summary(mass,x,z,ls,ts,True)
 
 def closure_score(data):
-    """Worst normalized center residual; smaller is better numerical closure."""
-    return np.maximum.reduce([np.abs(data['M/M★'].to_numpy())/.01,
-                              np.abs(data['L/L★'].to_numpy())/.1,
-                              np.abs(data['r/R'].to_numpy())/.02])
+    """RMS of normalized center residuals; smaller is better numerical closure."""
+    normalized=np.array([np.abs(data['M/M★'].to_numpy())/.01,
+                         np.abs(data['L/L★'].to_numpy())/.1,
+                         np.abs(data['r/R'].to_numpy())/.02])
+    return np.sqrt(np.mean(normalized**2,axis=0))
 
 def grid_search_ui(calculate, sidebar_parameters, current):
     st.subheader('Grid search')
@@ -242,7 +243,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             good=good.copy()
             good.insert(0,'Rank',range(1,len(good)+1))
             st.write(f'{len(good)} passing models found among {len(refined)} refined trials.')
-            if len(good):st.caption('Passing models are ranked by the smallest worst normalized mass, luminosity, or radius residual (Closure score). This measures numerical closure, not physical accuracy.')
+            if len(good):st.caption('Passing models are ranked by the smallest RMS of normalized mass, luminosity, and radius residuals (Closure score). This measures numerical closure, not physical accuracy.')
             st.caption('Density/minimum ≥ 1; density/maximum ≤ 1; core/shell energy and temperature ≥ 1 are required.')
             refined['Status']=refined.Flag.map(dict(zip(flag_order,status_labels)))
             refined.loc[refined.Error!=0,'Status']=status_labels[0]
@@ -290,7 +291,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         matches.insert(0,'Rank',range(1,len(matches)+1))
         if len(matches):
             st.subheader('Passing models')
-            st.caption('Ranked by numerical closure: lower scores are better. The score is the largest of |M/M★| / 0.01, |L/L★| / 0.1, and (r/R) / 0.02. All listed models pass the core checks; this ranking does not establish physical accuracy or uniqueness.')
+            st.caption('Ranked by numerical closure: lower scores are better. The score is the RMS of |M/M★| / 0.01, |L/L★| / 0.1, and (r/R) / 0.02. These are acceptance thresholds, not statistical uncertainties. All listed models pass the core checks; this ranking does not establish physical accuracy or uniqueness.')
             st.dataframe(matches[['Rank','Closure score','L (L☉)','Teff (K)','r/R','M/M★','L/L★']],hide_index=True,width='stretch')
             matched=st.selectbox('Passing model to run',matches.index.tolist(),
                 format_func=lambda i:f"#{matches.loc[i,'Rank']} · score={data.loc[i,'Closure score']:.4g} · L={data.loc[i,'L (L☉)']:.8g} L☉, Teff={data.loc[i,'Teff (K)']:.5f} K",
