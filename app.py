@@ -15,7 +15,7 @@ def calculate(*pars):
     return cached_calculate(pars,SOLVER_REVISION)
 if st.session_state.get('solver_revision')!=SOLVER_REVISION:
     had_results='current' in st.session_state or 'grid_result' in st.session_state
-    for key in ['current','previous_trial','reference','grid_result','direction_tests','pending_grid_guess']:
+    for key in ['current','previous_trial','reference','grid_result','direction_tests','sweep_Luminosity','sweep_Temperature','pending_grid_guess']:
         st.session_state.pop(key,None)
     st.session_state.solver_revision=SOLVER_REVISION
     if had_results:
@@ -69,7 +69,7 @@ st.markdown("""
 """,unsafe_allow_html=True)
 if st.session_state.pop('switch_to_model_tab',False):
     st.session_state.workflow_tab='☀️ Model'
-model_tab,adjustment_tab,grid_tab=st.tabs(['☀️ Model','↔️ Adjustment tests','▦ Grid search'],key='workflow_tab',on_change='rerun')
+model_tab,adjustment_tab,grid_tab=st.tabs(['☀️ Model','↔️ Parameter search','▦ Grid search'],key='workflow_tab',on_change='rerun')
 from grid_search import grid_search_ui
 with grid_tab:
     grid_search_ui(calculate,(mass,x,z),st.session_state.get('current'))
@@ -77,7 +77,7 @@ if 'current' not in st.session_state:
     with model_tab:
         st.info('Choose sidebar parameters and click Run model, or select a passing trial in the Grid search tab.')
     with adjustment_tab:
-        st.info('Run a model first, then use this tab to compare nearby luminosity and temperature adjustments.')
+        st.info('Run a model first, then explore one-dimensional luminosity and temperature searches.')
     st.stop()
 with model_tab:
     r=st.session_state.current
@@ -165,34 +165,8 @@ with model_tab:
         st.caption(f"Previous trial stopped at r/R={old['r/R']:.4g}; current at {inner['r/R']:.4g}. Smaller absolute residuals alone do not establish improvement when stopping radii differ.")
 
 with adjustment_tab:
-    st.subheader('Test adjustment directions')
-    st.caption(f'Current trial: M={m:g} M☉ · L={l:.8g} L☉ · Teff={t:.6f} K · X={h:g} · Z={met:g}')
-    st.write('Test small changes in luminosity and effective temperature while keeping mass and composition fixed. These tests use the displayed model, even if you have edited the sidebar inputs.')
-    step=st.number_input('Adjustment size (%)',min_value=0.01,max_value=10.0,value=1.0,step=0.1)
-    if st.button('Test adjustment directions'):
-        trials=[('Baseline',l,t),('Increase luminosity',l*(1+step/100),t),('Decrease luminosity',l*(1-step/100),t),('Increase temperature',l,t*(1+step/100)),('Decrease temperature',l,t*(1-step/100))]
-        rows=[]
-        with st.spinner('Testing nearby surface conditions…'):
-            for name,trial_l,trial_t in trials:
-                row={'Trial':name,'L (L☉)':trial_l,'Teff (K)':trial_t}
-                try:
-                    trial=calculate(m,trial_l,trial_t,h,met)
-                    d=diagnostics(trial)
-                    row.update(d)
-                    row['Status']=STATUS.get(trial['flag'],'Unknown') if not trial['error'] else 'Numerical integration error'
-                    row['Integration error']=trial['error']
-                    row['Δ|M/M★|']=abs(d['M/M★'])-abs(inner['M/M★'])
-                    row['Δ|L/L★|']=abs(d['L/L★'])-abs(inner['L/L★'])
-                except Exception as exc:
-                    row['Status']=f'Could not calculate: {exc}'
-                rows.append(row)
-        st.session_state.direction_tests={'parameters':r['parameters'],'step':step,'rows':rows}
-    tests=st.session_state.get('direction_tests')
-    if tests and tests['parameters']==r['parameters'] and tests['step']==step:
-        st.dataframe(pd.DataFrame(tests['rows']),hide_index=True,width='stretch')
-        st.caption('Negative Δ means a smaller absolute residual. Compare r/R first: trials that stop at different radii are not directly comparable. Even both residuals shrinking does not guarantee convergence.')
-        st.info('If a trial passes the core checks without an integration error, inspect it next. Otherwise, look for a change that improves the residuals at a similar stopping radius. Try that direction with a smaller step, change one parameter at a time, and rerun. If mass and luminosity respond in opposite ways, both surface parameters may need tuning.')
-        st.write('Physical clue: negative luminosity means the trial interior used up its luminosity too early; increasing the assumed luminosity is one experiment to test. There is no universal temperature adjustment rule because both inputs change the entire interior.')
+    from parameter_search import parameter_search_ui
+    parameter_search_ui(calculate,r)
 
 
 with model_tab:
