@@ -11,6 +11,12 @@ from solver_version import SOLVER_REVISION
 def cached_grid(mass,x,z,ls,ts,solver_revision):
     return grid_summary(mass,x,z,ls,ts,True)
 
+def closure_score(data):
+    """Worst normalized center residual; smaller is better numerical closure."""
+    return np.maximum.reduce([np.abs(data['M/M★'].to_numpy())/.01,
+                              np.abs(data['L/L★'].to_numpy())/.1,
+                              np.abs(data['r/R'].to_numpy())/.02])
+
 def grid_search_ui(calculate, sidebar_parameters, current):
     st.subheader('Grid search')
     with st.expander('Search luminosity and temperature',expanded=True):
@@ -63,6 +69,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             st.info('Mass or composition changed. Run a new grid search for these parameters.')
             return
         data=pd.DataFrame(grid['rows'])
+        data['Closure score']=closure_score(data)
         st.write(f"{int(data.Accepted.sum())} of {len(data)} trials passed the solver core checks.")
         # Colorbar reads bottom to top; place Passed at its highest category.
         flag_order=[-2,-1,1,2,3,4,5,6,0]
@@ -230,8 +237,12 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         refinement=st.session_state.get('band_refinements')
         if refinement and refinement[0]==st.session_state.get('grid_generation',0):
             refined=pd.DataFrame(refinement[1],columns=['L (L☉)','Teff (K)','Flag','Error','r/R','M/M★','L/L★','Density / minimum','Density / maximum','Core / shell energy','Core / shell temperature']).drop_duplicates(['L (L☉)','Teff (K)'])
-            good=refined[(refined.Flag==0)&(refined.Error==0)]
+            refined['Closure score']=closure_score(refined)
+            good=refined[(refined.Flag==0)&(refined.Error==0)].sort_values(['Closure score','L (L☉)','Teff (K)'])
+            good=good.copy()
+            good.insert(0,'Rank',range(1,len(good)+1))
             st.write(f'{len(good)} passing models found among {len(refined)} refined trials.')
+            if len(good):st.caption('Passing models are ranked by the smallest worst normalized mass, luminosity, or radius residual (Closure score). This measures numerical closure, not physical accuracy.')
             st.caption('Density/minimum ≥ 1; density/maximum ≤ 1; core/shell energy and temperature ≥ 1 are required.')
             refined['Status']=refined.Flag.map(dict(zip(flag_order,status_labels)))
             refined.loc[refined.Error!=0,'Status']=status_labels[0]
@@ -275,12 +286,14 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             st.rerun()
         if st.session_state.pop('search_bounds_prepared',False):
             st.success('Finer bounds loaded above. Click Run grid search to evaluate them.')
-        matches=data[data.Accepted].copy()
+        matches=data[data.Accepted].sort_values(['Closure score','L (L☉)','Teff (K)']).copy()
+        matches.insert(0,'Rank',range(1,len(matches)+1))
         if len(matches):
             st.subheader('Passing models')
-            st.dataframe(matches[['L (L☉)','Teff (K)','r/R','M/M★','L/L★']],hide_index=True,width='stretch')
+            st.caption('Ranked by numerical closure: lower scores are better. The score is the largest of |M/M★| / 0.01, |L/L★| / 0.1, and (r/R) / 0.02. All listed models pass the core checks; this ranking does not establish physical accuracy or uniqueness.')
+            st.dataframe(matches[['Rank','Closure score','L (L☉)','Teff (K)','r/R','M/M★','L/L★']],hide_index=True,width='stretch')
             matched=st.selectbox('Passing model to run',matches.index.tolist(),
-                format_func=lambda i:f"L={data.loc[i,'L (L☉)']:.8g} L☉, Teff={data.loc[i,'Teff (K)']:.5f} K",
+                format_func=lambda i:f"#{matches.loc[i,'Rank']} · score={data.loc[i,'Closure score']:.4g} · L={data.loc[i,'L (L☉)']:.8g} L☉, Teff={data.loc[i,'Teff (K)']:.5f} K",
                 key=f'passing_choice_{st.session_state.get("grid_generation",0)}')
             if st.button('Run selected passing model',type='primary'):
                 row=data.loc[matched]
