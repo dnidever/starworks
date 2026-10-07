@@ -20,7 +20,7 @@ if st.session_state.get('solver_revision')!=SOLVER_REVISION:
     st.session_state.solver_revision=SOLVER_REVISION
     if had_results:
         st.info('The solver was updated. Previous model and grid results were cleared; run your trial or grid again.')
-for key,value in {'guess_mass':1.0,'guess_lum':0.843496,'guess_teff':5445.20,'guess_x':.70,'guess_z':.008}.items():
+for key,value in {'guess_mass':1.0,'guess_lum':0.8652,'guess_teff':5513.5,'guess_x':.70,'guess_z':.008}.items():
     st.session_state.setdefault(key,value)
 pending=st.session_state.pop('pending_grid_guess',None)
 if pending:
@@ -36,7 +36,7 @@ with st.sidebar:
         z=st.number_input('Metal mass fraction Z',key='guess_z',min_value=0.000001,max_value=0.5,step=0.001,format='%.6f')
         submitted=st.form_submit_button('Run model',type='primary')
     st.caption('Helium fraction Y = 1 − X − Z. Luminosity and temperature are trial boundary conditions, not predictions.')
-    st.caption('Initial inputs use your selected 1 M☉ trial at X=0.70 and Z=0.008; inspect the solver status after running.')
+    st.caption('Initial inputs give a verified passing 1 M☉ trial at X=0.70 and Z=0.008.')
 if submitted:
     try:
         with st.spinner('Integrating stellar structure…'):

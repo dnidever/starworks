@@ -70,3 +70,5 @@ The main step stays at R/1000 through the surface and interior; it never increas
 Default grid bounds are ±2% in luminosity and ±1% in effective temperature around the displayed trial (or initial trial before a model is run). Bounds remain editable.
 
 Current default 1 M☉ trial: L=0.843496 L☉, Teff=5445.20 K, X=0.70, Z=0.008. These are the user-selected values; a local check returns a negative-mass failure with the current integration settings.
+
+Updated verified passing default: M=1 M☉, L=0.8652 L☉, Teff=5513.5 K, X=0.70, Z=0.008. This supersedes earlier default values above.
