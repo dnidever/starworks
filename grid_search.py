@@ -52,13 +52,16 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             return
         data=pd.DataFrame(grid['rows'])
         st.write(f"{int(data.Accepted.sum())} of {len(data)} trials passed the solver core checks.")
-        colors=['#64748b','#a78bfa','#22c55e','#eab308','#f97316','#ec4899','#dc2626','#991b1b','#2563eb']
+        # Colorbar reads bottom to top; place Passed at its highest category.
+        flag_order=[-2,-1,1,2,3,4,5,6,0]
+        colors=['#64748b','#a78bfa','#eab308','#f97316','#ec4899','#dc2626','#991b1b','#2563eb','#22c55e']
         scale=[]
         for i,color in enumerate(colors):scale.extend([(i/9,color),((i+1)/9,color)])
         matrix=data.Flag.to_numpy().reshape(len(grid['ls']),len(grid['ts']))
-        fig=go.Figure(go.Heatmap(x=grid['ts'],y=grid['ls'],z=matrix,zmin=-2.5,zmax=6.5,colorscale=scale,
+        display_matrix=np.vectorize({flag:i for i,flag in enumerate(flag_order)}.__getitem__)(matrix)
+        fig=go.Figure(go.Heatmap(x=grid['ts'],y=grid['ls'],z=display_matrix,zmin=-.5,zmax=8.5,colorscale=scale,
             customdata=data.Status.to_numpy().reshape(matrix.shape),hovertemplate='Teff=%{x:.2f} K<br>L=%{y:.6g} L☉<br>%{customdata}<extra></extra>',
-            colorbar=dict(tickvals=list(range(-2,7)),ticktext=['Numerical error','Shell limit','Passed','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch'])))
+            colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed'])))
         fig.update_layout(height=440,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
         if grid['log_l']:fig.update_yaxes(type='log')
         st.plotly_chart(fig,width='stretch')
