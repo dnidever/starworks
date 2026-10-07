@@ -103,9 +103,32 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             values=np.where(np.isfinite(values),values,np.nan)
             heatmap_options=dict(z=values.reshape(matrix.shape).tolist(),colorscale='Viridis',
                                  colorbar=dict(title=dict(text=column)))
-            if column!='r/R' and np.any(values<0):
-                extent=float(np.nanmax(np.abs(values)))
-                heatmap_options.update(colorscale='RdBu',zmin=-extent,zmax=extent,zmid=0)
+            finite=values[np.isfinite(values)]
+            with st.expander('Color scale limits',expanded=True):
+                mode=st.selectbox('Color range',['Robust (5th–95th percentiles)','Full data range','Manual'],key='grid_color_range')
+                if len(finite):
+                    lower,upper=map(float,np.percentile(finite,[5,95]))
+                    if mode=='Full data range':lower,upper=float(finite.min()),float(finite.max())
+                else:lower,upper=0.,1.
+                if lower==upper:
+                    padding=max(abs(lower)*.05,1e-6)
+                    lower-=padding;upper+=padding
+                if mode=='Manual':
+                    generation=st.session_state.get('grid_generation',0)
+                    left,right=st.columns(2)
+                    lower=left.number_input('Color minimum',value=float(lower),format='%.8g',key=f'color_min_{column}_{generation}')
+                    upper=right.number_input('Color maximum',value=float(upper),format='%.8g',key=f'color_max_{column}_{generation}')
+                    if lower>=upper:
+                        st.error('Color minimum must be smaller than color maximum.')
+                        lower,upper=(float(v) for v in np.percentile(finite,[5,95])) if len(finite) else (0.,1.)
+                        if lower==upper:upper=lower+max(abs(lower)*.05,1e-6)
+                heatmap_options.update(zmin=lower,zmax=upper)
+                if column!='r/R' and lower<0<upper:
+                    # Put neutral white exactly at zero without expanding the limits.
+                    zero=(0-lower)/(upper-lower)
+                    heatmap_options['colorscale']=[(0,'#b2182b'),(zero,'#f7f7f7'),(1,'#2166ac')]
+                clipped=int(np.sum((finite<lower)|(finite>upper)))
+                st.caption(f'Color limits: {lower:.6g} to {upper:.6g}. {clipped} trials outside these limits use the endpoint colors. Hover values remain unchanged.')
         fig=go.Figure(go.Heatmap(x=grid['ts'].tolist(),y=grid['ls'].tolist(),
             customdata=details.reshape(*matrix.shape,4).tolist(),hovertemplate=hover,
             **heatmap_options))
