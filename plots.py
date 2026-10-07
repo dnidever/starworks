@@ -7,9 +7,12 @@ def invalid_shells(data):
     bad=~np.isfinite(data[['r','M','L','T','P','rho','epsilon','kappa']]).all(axis=1)
     for q in ['T','P','rho']: bad |= data[q]<=0
     for q in ['r','M','L','epsilon','kappa']: bad |= data[q]<0
+    # Only the deliberately zero-valued starting surface shell is exempt.
+    surface=(data['index']==1)&(data['T']==0)&(data.P==0)&(data.rho==0)&(data.r==data.r.max())
+    bad &= ~surface
     return np.asarray(bad)
 
-def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False):
+def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None):
     panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')]] if advanced else [
         [('T','Temperature','K'),('rho','Density','g cm⁻³')],
         [('m_fraction','Mass fraction',''),('l_fraction','Luminosity fraction','')],
@@ -69,4 +72,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
             orientation='v',font=dict(size=10),bgcolor='rgba(255,255,255,0.85)',
             bordercolor='rgba(100,100,100,0.3)',borderwidth=1)})
     fig.update_layout(height=720 if not advanced else 600,margin=dict(t=60,b=45),hovermode='x unified')
+    if x_range is not None:
+        bounds=np.log10(x_range).tolist() if log_x else list(x_range)
+        fig.update_xaxes(range=bounds,autorange=False)
     return fig

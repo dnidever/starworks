@@ -44,3 +44,9 @@ The core explanation and residuals appear above the plots. “Test adjustment di
 ## Compact plots
 
 Four default panels combine normalized temperature/density, fractional mass/luminosity, nuclear energy generation, and energy transport. Actual values are available on hover. Pressure, opacity and d ln P/d ln T are in Advanced plots. Red bands and solid lines indicate invalid computed shells; dashed red lines identify the innermost finite positive-radius shell in failed models. Markers apply to the current model. Invalid mass coordinates may reverse, so that axis uses lines only.
+
+## Grid search and zoom
+
+Open Grid search in luminosity and temperature near the top. Set ranges and sample counts (default 15×15, maximum 30×30), optionally use logarithmic luminosity spacing, and run the grid. The status map and downloadable table report solver outcomes and residuals. Select a trial and click Inspect selected grid trial to display its profiles. With a displayed model, the grid holds its mass and composition fixed. Otherwise it uses sidebar mass and composition. Narrow the bounds to refine a promising region.
+
+Limit x-range sets minimum and maximum coordinates for all main and advanced plots; logarithmic bounds must be positive. The artificial surface shell (index 1, maximum radius, zero temperature/pressure/density) is exempt from invalid-shell markers. Interior invalid shells remain marked.
