@@ -14,11 +14,11 @@ def invalid_shells(data):
 
 def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None, show_core=False, show_points=False):
     panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')],[('transport','Transport','')]] if advanced else [
-        [('T','Temperature','K'),('rho','Density','g cm⁻³')],
+        [('T','Temperature','K'),('P','Pressure','dyn cm⁻²')],
         [('m_fraction','Mass fraction',''),('l_fraction','Luminosity fraction','')],
         [('epsilon','Energy generation','erg g⁻¹ s⁻¹')],
         [('rho','Density','g cm⁻³')]]
-    titles=['Pressure','Opacity','Temperature gradient','Energy transport'] if advanced else ['Temperature and density / respective maxima','Enclosed mass and luminosity / totals','Nuclear energy generation','Density (g cm⁻³)']
+    titles=['Pressure','Opacity','Temperature gradient','Energy transport'] if advanced else ['Temperature and pressure / respective maxima','Enclosed mass and luminosity / totals','Nuclear energy generation','Density (g cm⁻³)']
     fig=make_subplots(rows=2,cols=2,subplot_titles=titles)
     for i,panel in enumerate(panels):
         row,col=i//2+1,i%2+1
@@ -28,7 +28,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
             for j,(q,label,unit) in enumerate(panel):
                 raw=(data.zone=='c').astype(float).to_numpy() if q=='transport' else data[q].to_numpy()
                 y=raw.copy()
-                if not advanced and i==0 and q in ['T','rho']:
+                if not advanced and i==0 and q in ['T','P']:
                     pos=raw[np.isfinite(raw)&(raw>0)]
                     y=raw/pos.max() if len(pos) else np.full(len(raw),np.nan)
                 if log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2,3]):
@@ -45,7 +45,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
                     core_x=0.0  # At the geometric center, enclosed mass coordinate is zero.
                     core_y=raw_core
-                    if not advanced and i==0 and q in ['T','rho']:
+                    if not advanced and i==0 and q in ['T','P']:
                         core_y=raw_core/pos.max() if len(pos) else np.nan
                     logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2,3])
                     if np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
@@ -138,6 +138,39 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
     if x_range is not None:
         bounds=np.log10(x_range).tolist() if log_x else list(x_range)
         fig.update_xaxes(range=bounds,autorange=False)
+        # Plotly does not autoscale y when a fixed x-range clips the data.
+        # Include visible integrated points and core/extrapolation segments.
+        for i in range(len(panels)):
+            if advanced and i==3:continue  # fixed categorical transport scale
+            axis_name='y' if i==0 else f'y{i+1}'
+            layout_name='yaxis' if i==0 else f'yaxis{i+1}'
+            logarithmic=fig.layout[layout_name].type=='log'
+            visible=[]
+            for trace in fig.data:
+                if trace.yaxis!=axis_name:continue
+                xs=np.asarray(trace.x,dtype=float)
+                ys=np.asarray(trace.y,dtype=float)
+                mask=np.isfinite(xs)&np.isfinite(ys)&(xs>=x_range[0])&(xs<=x_range[1])
+                if logarithmic:mask &= ys>0
+                visible.extend(ys[mask].tolist())
+                # Account for lines crossing either edge even without a sample there.
+                if trace.mode and 'lines' in trace.mode:
+                    for k in range(len(xs)-1):
+                        if not np.isfinite([xs[k],xs[k+1],ys[k],ys[k+1]]).all() or xs[k]==xs[k+1]:continue
+                        for edge in x_range:
+                            if min(xs[k],xs[k+1])<edge<max(xs[k],xs[k+1]):
+                                xx=np.log10([xs[k],xs[k+1],edge]) if log_x and min(xs[k],xs[k+1],edge)>0 else [xs[k],xs[k+1],edge]
+                                if logarithmic:
+                                    if min(ys[k],ys[k+1])<=0:continue
+                                    yy=np.log10([ys[k],ys[k+1]])
+                                    value=10**(yy[0]+(yy[1]-yy[0])*(xx[2]-xx[0])/(xx[1]-xx[0]))
+                                else:value=ys[k]+(ys[k+1]-ys[k])*(xx[2]-xx[0])/(xx[1]-xx[0])
+                                visible.append(value)
+            if visible:
+                values=np.log10(visible) if logarithmic else np.asarray(visible)
+                low,high=float(np.min(values)),float(np.max(values))
+                padding=max((high-low)*.08,.05 if logarithmic else max(abs(low),abs(high),1e-12)*.05)
+                fig.update_layout(**{layout_name:dict(range=[low-padding,high+padding],autorange=False)})
     elif coord=='r_fraction' and not log_x:
         xmax=max(float(model['profile'].r_fraction.max()) for model in [current,reference] if model is not None)
         fig.update_xaxes(range=[0,xmax],autorange=False)
