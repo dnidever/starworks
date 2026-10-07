@@ -72,3 +72,7 @@ Default grid bounds are ±2% in luminosity and ±1% in effective temperature aro
 Current default 1 M☉ trial: L=0.843496 L☉, Teff=5445.20 K, X=0.70, Z=0.008. These are the user-selected values; a local check returns a negative-mass failure with the current integration settings.
 
 Updated verified passing default: M=1 M☉, L=0.8652 L☉, Teff=5513.5 K, X=0.70, Z=0.008. This supersedes earlier default values above.
+
+## Derivative-limited radial steps
+
+The interior now limits predicted changes in pressure, temperature, mass, and luminosity to 10%, using the derivatives already computed for each shell. Steps grow by at most 20% per shell, are capped at R/200 and half the remaining radius, and have a final R/25000 floor. Mass/luminosity scales have floors to prevent vanishing steps. Surface initialization and the 5000-shell limit remain. No extra derivative evaluations or retries are added. This supersedes the fixed interior step description above. Model acceptance and passing parameters can change; solver-revision cache invalidation forces fresh calculations.

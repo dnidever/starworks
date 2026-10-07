@@ -496,6 +496,16 @@ def starmodel(Msolar,Lsolar,Te,X,Z,verbose=True, output_path=None):
         dfdr[1]  = dMdr(r[im1], rho[im1])
         dfdr[2]  = dLdr(r[im1], rho[im1], epslon[im1])
         dfdr[3]  = dTdr(r[im1], M_r[im1], L_r[im1], T[im1], rho[im1],kappa[im1], mu, irc)
+        # Reuse the four derivatives; no extra equation evaluations.
+        step = Rs / 200.0
+        scales = (abs(P[im1]), max(abs(M_r[im1]), 0.0001*Ms),
+                  max(abs(L_r[im1]), 0.001*Ls), abs(T[im1]))
+        for component in range(4):
+            if abs(dfdr[component]) > 0.0:
+                step = min(step, 0.1 * scales[component] / abs(dfdr[component]))
+        # Grow at most 20% per shell. A floor prevents vanishing steps.
+        step = min(step, 1.2*abs(deltar), 0.5*r[im1])
+        deltar = -max(step, Rs/25000.0)
         f_i,ierr = runge(f_im1, dfdr, r[im1], deltar, irc, X, Z, XCNO, mu, i)
 
         if (ierr != 0):
@@ -615,17 +625,6 @@ def starmodel(Msolar,Lsolar,Te,X,Z,verbose=True, output_path=None):
         if (Igoof != -1):
             istop = i
             break
-        #
-        #  Is it time to change the step size?
-        #
-        if ((idrflg == 0) and (M_r[i] < (0.99*Ms))):
-            deltar = (-1.0)*Rs/1000.0
-            idrflg = 1
-
-        if ((idrflg == 1) and (abs(deltar) >= (0.5*r[i]))):
-            deltar = (-1.0)*Rs/5000.0
-            idrflg = 2
-
         istop = i
     
     # Generate warning messages for the central conditions.

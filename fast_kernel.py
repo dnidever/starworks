@@ -238,6 +238,13 @@ def integrate(Msolar, Lsolar, Te, X, Z):
         dfdr[1] = dMdr(r[im1], rho[im1])
         dfdr[2] = dLdr(r[im1], rho[im1], epslon[im1])
         dfdr[3] = dTdr(r[im1], M_r[im1], L_r[im1], T[im1], rho[im1], kappa[im1], mu, irc)
+        step = Rs / 200.0
+        scales = (abs(P[im1]), max(abs(M_r[im1]), 0.0001 * Ms), max(abs(L_r[im1]), 0.001 * Ls), abs(T[im1]))
+        for component in range(4):
+            if abs(dfdr[component]) > 0.0:
+                step = min(step, 0.1 * scales[component] / abs(dfdr[component]))
+        step = min(step, 1.2 * abs(deltar), 0.5 * r[im1])
+        deltar = -max(step, Rs / 25000.0)
         f_i, ierr = runge(f_im1, dfdr, r[im1], deltar, irc, X, Z, XCNO, mu, i)
         if ierr != 0:
             break
@@ -289,12 +296,6 @@ def integrate(Msolar, Lsolar, Te, X, Z):
         if Igoof != -1:
             istop = i
             break
-        if idrflg == 0 and M_r[i] < 0.99 * Ms:
-            deltar = -1.0 * Rs / 1000.0
-            idrflg = 1
-        if idrflg == 1 and abs(deltar) >= 0.5 * r[i]:
-            deltar = -1.0 * Rs / 5000.0
-            idrflg = 2
         istop = i
     rhocor = M_r[istop] / (4.0 / 3.0 * np.pi * r[istop] ** 3)
     epscor = L_r[istop] / M_r[istop]

@@ -41,6 +41,12 @@ def load_variant(directory,name,source):
 
 def main():
     source=(ROOT/'fast_kernel.py').read_text()
+    if TRANSITION not in source:
+        # Reconstruct the earlier fixed-step baseline from the adopted kernel.
+        start=source.index('        step = Rs / 200.0')
+        end=source.index('        f_i, ierr = runge',start)
+        source=source[:start]+source[end:]
+        source=source.replace('        istop = i\n    rhocor',TRANSITION+'        istop = i\n    rhocor')
     assert TRANSITION in source
     anchor='        f_i, ierr = runge(f_im1, dfdr, r[im1], deltar, irc, X, Z, XCNO, mu, i)'
     pars=[(1.,float(l),float(t),.7,.008) for l in np.linspace(.862,.868,7) for t in np.linspace(5503.5,5523.5,7)]
@@ -48,7 +54,7 @@ def main():
     pars.append(solar)
     with tempfile.TemporaryDirectory() as directory:
         fine=source.replace('5000','25000').replace('1000.0','5000.0')
-        variants=[('current',integrate),('fine_fixed',load_variant(directory,'fine_fixed',fine))]
+        variants=[('previous_fixed',load_variant(directory,'previous_fixed',source)),('fine_fixed',load_variant(directory,'fine_fixed',fine))]
         for fraction in [.02,.05,.1]:
             adaptive=source.replace(TRANSITION,'').replace(anchor,POLICY.replace('FRACTION',str(fraction))+anchor)
             variants.append((f'adaptive_{fraction}',load_variant(directory,'adaptive_'+str(int(fraction*100)),adaptive)))
