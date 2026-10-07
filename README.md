@@ -47,7 +47,7 @@ Four default panels combine normalized temperature/density, fractional mass/lumi
 
 ## Grid search and zoom
 
-Open Grid search in luminosity and temperature near the top. Set ranges and sample counts (default 25×25, maximum 200×200), optionally use logarithmic luminosity spacing, and run the grid. The status map and downloadable table report solver outcomes and residuals. Select a trial and click Inspect selected grid trial to display its profiles. With a displayed model, the grid holds its mass and composition fixed. Otherwise it uses sidebar mass and composition. Narrow the bounds to refine a promising region.
+Open Grid search in luminosity and temperature near the top. Set ranges and sample counts (default 50×50, maximum 200×200), optionally use logarithmic luminosity spacing, and run the grid. The status map and downloadable table report solver outcomes and residuals. Select a trial and click Inspect selected grid trial to display its profiles. With a displayed model, the grid holds its mass and composition fixed. Otherwise it uses sidebar mass and composition. Narrow the bounds to refine a promising region.
 
 Limit x-range sets minimum and maximum coordinates for all main and advanced plots; logarithmic bounds must be positive. The artificial surface shell (index 1, maximum radius, zero temperature/pressure/density) is exempt from invalid-shell markers. Interior invalid shells remain marked.
 
@@ -66,3 +66,5 @@ The intermediate inward step is now R/200 rather than R/100: the initial R/1000 
 ## Current integration spacing
 
 The main step stays at R/1000 through the surface and interior; it never increases at the 99%-mass threshold. Near the center, the existing half-remaining-radius rule reduces it to R/5000. The shell limit is 5000. Both reference and compiled solvers use these settings. Earlier step-transition descriptions and timings above document prior versions. Previously accepted input parameters may need retuning with the smaller steps.
+
+Default grid bounds are ±2% in luminosity and ±1% in effective temperature around the displayed trial (or initial trial before a model is run). Bounds remain editable.
