@@ -9,7 +9,7 @@ from solver_version import SOLVER_REVISION
 
 @st.cache_data(max_entries=30,show_spinner=False)
 def cached_grid(mass,x,z,ls,ts,solver_revision):
-    return grid_summary(mass,x,z,ls,ts)
+    return grid_summary(mass,x,z,ls,ts,True)
 
 def grid_search_ui(calculate, sidebar_parameters, current):
     st.subheader('Grid search')
@@ -49,10 +49,11 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                     return
                 with st.spinner('Searching trial models… The first search after a restart may take longer while the solver compiles.'):
                     results=cached_grid(float(mass),float(x),float(z),ls,ts,SOLVER_REVISION)
-                for trial_l,trial_t,flag,error,rr,mm,ll in results:
+                for trial_l,trial_t,flag,error,rr,mm,ll,dlo,dhi,er,tr in results:
                     flag=int(flag);error=int(error)
                     rows.append({'L (L☉)':trial_l,'Teff (K)':trial_t,'Accepted':flag==0 and error==0,
                                  'Flag':flag if not error else -2,'r/R':rr,'M/M★':mm,'L/L★':ll,
+                                 'Density / minimum':dlo,'Density / maximum':dhi,'Core / shell energy':er,'Core / shell temperature':tr,
                                  'Status':STATUS.get(flag,'Unknown') if not error else 'Unphysical pressure, temperature, or density'})
                 st.session_state.grid_generation=st.session_state.get('grid_generation',0)+1
                 st.session_state.grid_result=dict(parameters=(mass,x,z),rows=rows,ls=ls,ts=ts,log_l=log_l)
@@ -75,23 +76,37 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         for i,color in enumerate(colors):scale.extend([(i/9,color),((i+1)/9,color)])
         matrix=data.Flag.to_numpy().reshape(len(grid['ls']),len(grid['ts']))
         display_matrix=np.vectorize({flag:i for i,flag in enumerate(flag_order)}.__getitem__)(matrix)
-        # A residual heuristic, not a measurement of all core mismatches.
+        band=(data.Flag>=0)&(data['M/M★']>=0)&(data['M/M★']<.01)&(data['L/L★']>=0)&(data['L/L★']<.1)
+        # Multiplicative violations: zero means all available checks are met.
+        core_violation=np.maximum.reduce([
+            np.maximum(0,1-data['Density / minimum'].to_numpy()),
+            np.maximum(0,data['Density / maximum'].to_numpy()-1),
+            np.maximum(0,1-data['Core / shell energy'].to_numpy()),
+            np.maximum(0,1-data['Core / shell temperature'].to_numpy())])
+        data['Core mismatch']=core_violation
+
         residual=np.maximum.reduce([np.abs(data['M/M★'].to_numpy())/.01,
                                     np.abs(data['L/L★'].to_numpy())/.1,
                                     np.abs(data['r/R'].to_numpy())/.02])
+        residual=np.maximum(residual,1+core_violation)
+        residual=np.where(data.Accepted,0,residual)
         eligible=(data.Flag>=0)&np.isfinite(residual)
         score=np.where(eligible,1/(1+residual),np.nan)
         score=np.where(data.Accepted,1.0,np.minimum(score,.99))
         data['Promise score']=score
         map_quantity=st.selectbox('Map coloring',[
-            'Model status','Promising models','Remaining mass (M/M★)',
+            'Model status','Mass and luminosity within limits','Promising models','Remaining mass (M/M★)',
             'Remaining luminosity (L/L★)','Last finite shell radius (r/R)'],
             key='grid_map_quantity')
-        hover='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<extra></extra>'
-        details=data[['Status','r/R','M/M★','L/L★']].values
+        hover='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<br>Density/min=%{customdata[4]:.5g} (≥1)<br>Density/max=%{customdata[5]:.5g} (≤1)<br>Core/shell energy=%{customdata[6]:.5g} (≥1)<br>Core/shell temperature=%{customdata[7]:.5g} (≥1)<extra></extra>'
+        details=data[['Status','r/R','M/M★','L/L★','Density / minimum','Density / maximum','Core / shell energy','Core / shell temperature']].values
         if map_quantity=='Model status':
             heatmap_options=dict(z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
                 colorbar=dict(tickvals=list(range(9)),ticktext=status_labels))
+        elif map_quantity=='Mass and luminosity within limits':
+            heatmap_options=dict(z=band.astype(int).to_numpy().reshape(matrix.shape).tolist(),
+                zmin=-.5,zmax=1.5,colorscale=[(0,'#e2e8f0'),(.5,'#e2e8f0'),(.5,'#22c55e'),(1,'#22c55e')],
+                colorbar=dict(tickvals=[0,1],ticktext=['Outside limits','Both within limits']))
         elif map_quantity=='Promising models':
             heatmap_options=dict(z=score.reshape(matrix.shape).tolist(),zmin=0,zmax=1,
                 colorscale='Viridis',colorbar=dict(title=dict(text='Promise score')))
@@ -130,7 +145,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                 clipped=int(np.sum((finite<lower)|(finite>upper)))
                 st.caption(f'Color limits: {lower:.6g} to {upper:.6g}. {clipped} trials outside these limits use the endpoint colors. Hover values remain unchanged.')
         fig=go.Figure(go.Heatmap(x=grid['ts'].tolist(),y=grid['ls'].tolist(),
-            customdata=details.reshape(*matrix.shape,4).tolist(),hovertemplate=hover,
+            customdata=details.reshape(*matrix.shape,8).tolist(),hovertemplate=hover,
             **heatmap_options))
         fig.update_layout(height=560,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
         if grid['log_l']:fig.update_yaxes(type='log')
@@ -138,7 +153,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         # scatter layer provides selectable trial centers over the same map.
         fig.add_trace(go.Scatter(x=data['Teff (K)'].tolist(),y=data['L (L☉)'].tolist(),mode='markers',
             marker=dict(symbol='square',size=max(4,min(28,360/max(len(grid['ls']),len(grid['ts']))))),opacity=.05,
-            customdata=data[['Status','r/R','M/M★','L/L★']].values.tolist(),showlegend=False,
+            customdata=data[['Status','r/R','M/M★','L/L★','Density / minimum','Density / maximum','Core / shell energy','Core / shell temperature']].values.tolist(),showlegend=False,
             hovertemplate=hover,name='Select trial'))
         fig.update_layout(clickmode='event+select',dragmode=False)
         chart_key=f"grid_map_{st.session_state.get('grid_generation',0)}"
@@ -158,10 +173,51 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
         st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
         if map_quantity=='Promising models':
-            st.caption('Higher is more promising: the score uses the largest absolute mass, luminosity, or radius residual divided by its core threshold. Passing models score 1; failures remain below 1. Numerical errors and integration limits are blank. Density, energy generation, and temperature mismatch sizes are not included, so this is guidance, not an acceptance test.')
+            st.caption('Higher is more promising: ranking includes mass, luminosity, radius, and violations of the density, energy generation, and temperature core checks. Passing models score 1. Trials without usable core diagnostics are blank. This is search guidance, not an acceptance test.')
+        elif map_quantity=='Mass and luminosity within limits':
+            st.caption('Green: 0 ≤ remaining M/M★ < 0.01 and 0 ≤ remaining L/L★ < 0.1, with no integration error. These trials may still fail radius or core consistency checks.')
         elif map_quantity!='Model status':
             st.caption('Colors show the signed last finite shell value as a fraction of the total stellar mass, luminosity, or radius. Missing values appear as gaps. Hover to see each model’s status and diagnostics.')
         st.caption('In the Model status view, green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
+        band_candidates=data.loc[band&np.isfinite(core_violation)].sort_values('Core mismatch')
+        st.subheader('Refine the mass/luminosity band')
+        st.caption('Search up to three separated locations along the band with 21 × 21 finer trials per location. Mass and composition stay fixed. The original map remains available.')
+        if st.button('Refine promising band regions',disabled=band_candidates.empty):
+            chosen=[]
+            for index,row in band_candidates.iterrows():
+                pos=np.array([(row['L (L☉)']-grid['ls'][0])/(grid['ls'][-1]-grid['ls'][0]),
+                              (row['Teff (K)']-grid['ts'][0])/(grid['ts'][-1]-grid['ts'][0])])
+                if all(np.linalg.norm(pos-old)>.15 for _,old in chosen):chosen.append((index,pos))
+                if len(chosen)==3:break
+            batches=[]
+            with st.spinner('Refining the band and checking core consistency…'):
+                for index,_ in chosen:
+                    row=data.loc[index]
+                    dl=(grid['ls'][-1]-grid['ls'][0])/(len(grid['ls'])-1)
+                    dt=(grid['ts'][-1]-grid['ts'][0])/(len(grid['ts'])-1)
+                    ls=np.linspace(max(.000001,row['L (L☉)']-dl),row['L (L☉)']+dl,21)
+                    ts=np.linspace(max(1.,row['Teff (K)']-dt),row['Teff (K)']+dt,21)
+                    batches.append(cached_grid(float(mass),float(x),float(z),ls,ts,SOLVER_REVISION))
+            st.session_state.band_refinements=(st.session_state.get('grid_generation',0),np.vstack(batches))
+        refinement=st.session_state.get('band_refinements')
+        if refinement and refinement[0]==st.session_state.get('grid_generation',0):
+            refined=pd.DataFrame(refinement[1],columns=['L (L☉)','Teff (K)','Flag','Error','r/R','M/M★','L/L★','Density / minimum','Density / maximum','Core / shell energy','Core / shell temperature']).drop_duplicates(['L (L☉)','Teff (K)'])
+            good=refined[(refined.Flag==0)&(refined.Error==0)]
+            st.write(f'{len(good)} passing models found among {len(refined)} refined trials.')
+            st.caption('Density/minimum ≥ 1; density/maximum ≤ 1; core/shell energy and temperature ≥ 1 are required.')
+            refined['Status']=refined.Flag.map(dict(zip(flag_order,status_labels)))
+            refined.loc[refined.Error!=0,'Status']=status_labels[0]
+            shown=good if len(good) else refined
+            st.dataframe(shown,hide_index=True,width='stretch')
+            selected=st.selectbox('Refined trial to run',shown.index.tolist(),format_func=lambda i:f"L={refined.loc[i,'L (L☉)']:.8g}, Teff={refined.loc[i,'Teff (K)']:.6f} K",key=f'refined_choice_{refinement[0]}')
+            if st.button('Run selected refined model'):
+                row=refined.loc[selected]
+                result=calculate(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
+                st.session_state.previous_trial=st.session_state.get('current')
+                st.session_state.current=result
+                st.session_state.pending_grid_guess=result['parameters']
+                st.session_state.switch_to_model_tab=True
+                st.rerun()
         candidates=data.loc[eligible].sort_values(['Accepted','Promise score'],ascending=False)
         if len(candidates):
             best=candidates.iloc[0]
