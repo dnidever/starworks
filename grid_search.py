@@ -13,7 +13,7 @@ def cached_grid(mass,x,z,ls,ts,solver_revision):
 
 def grid_search_ui(calculate, sidebar_parameters, current):
     st.subheader('Grid search')
-    with st.expander('Search luminosity and temperature',expanded=current is None):
+    with st.expander('Search luminosity and temperature',expanded=True):
         mass,x,z=sidebar_parameters
         if current:
             mass,_,_,x,z=current['parameters']
