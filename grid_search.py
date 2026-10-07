@@ -95,7 +95,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         score=np.where(data.Accepted,1.0,np.minimum(score,.99))
         data['Promise score']=score
         map_quantity=st.selectbox('Map coloring',[
-            'Model status','Mass and luminosity within limits','Promising models','Remaining mass (M/M★)',
+            'Model status','Selected checks satisfied','Promising models','Remaining mass (M/M★)',
             'Remaining luminosity (L/L★)','Last finite shell radius (r/R)'],
             key='grid_map_quantity')
         hover='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<br>Density/min=%{customdata[4]:.5g} (≥1)<br>Density/max=%{customdata[5]:.5g} (≤1)<br>Core/shell energy=%{customdata[6]:.5g} (≥1)<br>Core/shell temperature=%{customdata[7]:.5g} (≥1)<extra></extra>'
@@ -103,10 +103,38 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         if map_quantity=='Model status':
             heatmap_options=dict(z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
                 colorbar=dict(tickvals=list(range(9)),ticktext=status_labels))
-        elif map_quantity=='Mass and luminosity within limits':
-            heatmap_options=dict(z=band.astype(int).to_numpy().reshape(matrix.shape).tolist(),
+        elif map_quantity=='Selected checks satisfied':
+            checks={
+                'Mass':(data['M/M★']>=0)&(data['M/M★']<.01),
+                'Luminosity':(data['L/L★']>=0)&(data['L/L★']<.1),
+                'Radius':(data['r/R']>0)&(data['r/R']<.02),
+                'Density':(data['Density / minimum']>=1)&(data['Density / maximum']<=1),
+                'Energy generation':data['Core / shell energy']>=1,
+                'Temperature':data['Core / shell temperature']>=1,
+            }
+            help_text={
+                'Mass':'0 ≤ remaining M/M★ < 0.01',
+                'Luminosity':'0 ≤ remaining L/L★ < 0.1',
+                'Radius':'0 < last finite shell r/R < 0.02',
+                'Density':'Inferred core density is between the last shell density and the solver’s upper limit.',
+                'Energy generation':'Inferred core energy generation per unit mass ≥ the last shell value.',
+                'Temperature':'Extrapolated core temperature ≥ the last shell temperature.',
+            }
+            selected_checks=[]
+            columns=st.columns(3)
+            for i,(label,mask) in enumerate(checks.items()):
+                if columns[i%3].toggle(label,value=label in ['Mass','Luminosity'],
+                                      key=f'grid_check_{label}',help=help_text[label]):
+                    selected_checks.append(label)
+            satisfied=data.Flag>=0
+            for label in selected_checks:satisfied=satisfied&checks[label]
+            if not selected_checks:
+                st.info('Select at least one check to display its satisfied region.')
+                satisfied=pd.Series(False,index=data.index)
+            st.write(f'{int(satisfied.sum())} of {len(data)} trials satisfy all selected checks.')
+            heatmap_options=dict(z=satisfied.astype(int).to_numpy().reshape(matrix.shape).tolist(),
                 zmin=-.5,zmax=1.5,colorscale=[(0,'#e2e8f0'),(.5,'#e2e8f0'),(.5,'#22c55e'),(1,'#22c55e')],
-                colorbar=dict(tickvals=[0,1],ticktext=['Outside limits','Both within limits']))
+                colorbar=dict(tickvals=[0,1],ticktext=['Not satisfied','All selected checks satisfied']))
         elif map_quantity=='Promising models':
             heatmap_options=dict(z=score.reshape(matrix.shape).tolist(),zmin=0,zmax=1,
                 colorscale='Viridis',colorbar=dict(title=dict(text='Promise score')))
@@ -174,8 +202,8 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
         if map_quantity=='Promising models':
             st.caption('Higher is more promising: ranking includes mass, luminosity, radius, and violations of the density, energy generation, and temperature core checks. Passing models score 1. Trials without usable core diagnostics are blank. This is search guidance, not an acceptance test.')
-        elif map_quantity=='Mass and luminosity within limits':
-            st.caption('Green: 0 ≤ remaining M/M★ < 0.01 and 0 ≤ remaining L/L★ < 0.1, with no integration error. These trials may still fail radius or core consistency checks.')
+        elif map_quantity=='Selected checks satisfied':
+            st.caption('Green cells satisfy every selected check. Mass and luminosity are selected initially. Integration errors and integration-limit trials are excluded; unavailable diagnostics do not satisfy a check. Unselected checks may still fail.')
         elif map_quantity!='Model status':
             st.caption('Colors show the signed last finite shell value as a fraction of the total stellar mass, luminosity, or radius. Missing values appear as gaps. Hover to see each model’s status and diagnostics.')
         st.caption('In the Model status view, green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
