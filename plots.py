@@ -100,7 +100,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
         bottom=not advanced and i in [0,1,2]
         left=not advanced and i in [0,2]
         fig.update_layout(**{'legend'+suffix:dict(
-            x=xdomain[0]+.01 if left else xdomain[1]-.01,
+            x=xdomain[0]+.2*(xdomain[1]-xdomain[0]) if left else xdomain[1]-.01,
             y=ydomain[0]+.015 if bottom else ydomain[1]-.015,
             xanchor='left' if left else 'right',yanchor='bottom' if bottom else 'top',
             orientation='v',font=dict(size=10),bgcolor='rgba(255,255,255,0.85)',
