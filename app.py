@@ -93,13 +93,12 @@ The highlighted remaining mass and luminosity above the plots describe the **las
 st.subheader('Last finite-radius shell values and core density check')
 st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
 df=r['profile']; inner=diagnostics(r)
-cols=st.columns(5)
-cols[0].metric('Radius (R☉)',f"{r['radius']/6.9599e10:.4g}")
-cols[1].metric('Innermost r/R',f"{inner['r/R']:.4g}")
+cols=st.columns(4)
+cols[0].metric('Innermost r/R',f"{inner['r/R']:.4g}")
 previous=st.session_state.get('previous_trial')
 comparable=previous is not None and tuple(previous['parameters'][i] for i in [0,3,4])==tuple(r['parameters'][i] for i in [0,3,4])
 old=diagnostics(previous) if comparable else None
-for col,label,key in [(cols[2],'Remaining M/M★','M/M★'),(cols[3],'Remaining L/L★','L/L★')]:
+for col,label,key in [(cols[1],'Remaining M/M★','M/M★'),(cols[2],'Remaining L/L★','L/L★')]:
     value=inner[key]
     change=''
     if old is not None and np.isfinite([value,old[key]]).all():
@@ -117,7 +116,7 @@ for col,label,key in [(cols[2],'Remaining M/M★','M/M★'),(cols[3],'Remaining 
         st.markdown(f'<div style="background:{residual_bg};border:1px solid {residual_border};border-radius:8px;padding:12px;color:{residual_color};">'
                     f'<div style="font-size:14px;">{label}</div><div style="font-size:30px;font-weight:700;">{value:.5g}</div>{change}</div>',unsafe_allow_html=True)
 density_shells=df[(df.r>0)&np.isfinite(df.rho)&(df.rho>0)]
-with cols[4]:
+with cols[3]:
     if len(density_shells)>=2:
         rho_last=float(density_shells.iloc[0].rho)
         rho_upper=10*rho_last*rho_last/float(density_shells.iloc[1].rho)
