@@ -9,7 +9,7 @@ def invalid_shells(data):
     for q in ['r','M','L','epsilon','kappa']: bad |= data[q]<0
     return np.asarray(bad)
 
-def make_profiles(current, reference, coord, axis, log=False, advanced=False):
+def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False):
     panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')]] if advanced else [
         [('T','Temperature','K'),('rho','Density','g cm⁻³')],
         [('m_fraction','Mass fraction',''),('l_fraction','Luminosity fraction','')],
@@ -31,7 +31,12 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False):
                 if log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2]):
                     y=np.where(y>0,y,np.nan)
                     fig.update_yaxes(type='log',row=row,col=col)
-                fig.add_trace(go.Scatter(x=data[coord],y=y,customdata=raw,mode='lines',name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                xvalues=data[coord].to_numpy().copy()
+                if log_x:
+                    valid_x=np.isfinite(xvalues)&(xvalues>0)
+                    xvalues=np.where(valid_x,xvalues,np.nan)
+                    y=np.where(valid_x,y,np.nan)
+                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines',name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
         # Radius bands are only meaningful with the radius axis; invalid mass coordinates
         # can fold back on themselves, so use shell markers on that axis.
         data=current['profile']; bad=invalid_shells(data); xx=data[coord].to_numpy()
@@ -39,15 +44,15 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False):
             for k in np.flatnonzero(bad):
                 left=(xx[k-1]+xx[k])/2 if k else xx[k]
                 right=(xx[k]+xx[k+1])/2 if k+1<len(xx) else xx[k]
-                if np.isfinite(left) and np.isfinite(right):
+                if np.isfinite(left) and np.isfinite(right) and (not log_x or left>0 and right>0):
                     fig.add_vrect(x0=left,x1=right,fillcolor='red',opacity=.16,line_width=0,row=row,col=col)
         for k in np.flatnonzero(bad):
-            if np.isfinite(xx[k]): fig.add_vline(x=float(xx[k]),line_color='red',line_width=1,row=row,col=col)
+            if np.isfinite(xx[k]) and (not log_x or xx[k]>0): fig.add_vline(x=float(xx[k]),line_color='red',line_width=1,row=row,col=col)
         if current['flag']!=0 or current['error']:
-            positive=data[(data.r>0)&np.isfinite(data[coord])]
+            positive=data[(data.r>0)&np.isfinite(data[coord]) & ((data[coord]>0) if log_x else True)]
             if len(positive):
                 fig.add_vline(x=float(positive.iloc[0][coord]),line_color='red',line_dash='dash',line_width=2,row=row,col=col)
-        fig.update_xaxes(title_text=axis,row=row,col=col)
+        fig.update_xaxes(title_text=axis,type='log' if log_x else 'linear',row=row,col=col)
         if not advanced and i==3:
             fig.update_yaxes(tickvals=[0,1],ticktext=['Radiative','Convective'],range=[-.1,1.1],row=row,col=col)
         if not advanced and i==2: fig.update_yaxes(title_text='erg g⁻¹ s⁻¹',row=row,col=col)
@@ -55,8 +60,12 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False):
         suffix='' if i==0 else str(i+1)
         xdomain=fig.layout['xaxis'+suffix].domain
         ydomain=fig.layout['yaxis'+suffix].domain
+        bottom=not advanced and i in [0,1,2]
+        left=not advanced and i in [0,2]
         fig.update_layout(**{'legend'+suffix:dict(
-            x=xdomain[1]-.01,y=ydomain[1]-.015,xanchor='right',yanchor='top',
+            x=xdomain[0]+.01 if left else xdomain[1]-.01,
+            y=ydomain[0]+.015 if bottom else ydomain[1]-.015,
+            xanchor='left' if left else 'right',yanchor='bottom' if bottom else 'top',
             orientation='v',font=dict(size=10),bgcolor='rgba(255,255,255,0.85)',
             bordercolor='rgba(100,100,100,0.3)',borderwidth=1)})
     fig.update_layout(height=720 if not advanced else 600,margin=dict(t=60,b=45),hovermode='x unified')

@@ -78,6 +78,9 @@ with a:
     axis=st.radio('Horizontal axis',['Fractional radius','Enclosed mass fraction'],horizontal=True)
 with b:
     log=st.checkbox('Logarithmic positive profiles',value=True)
+log_x=st.toggle('Logarithmic x-axis',value=False)
+if log_x:
+    st.caption('The logarithmic x-axis shows positive coordinates only; zero and negative coordinates are omitted.')
 coord='r_fraction' if axis=='Fractional radius' else 'm_fraction'
 reference=st.session_state.get('reference')
 c1,c2=st.columns(2)
@@ -88,7 +91,7 @@ if c2.button('Clear comparison'):
     st.session_state.pop('reference',None)
     reference=None
 from plots import make_profiles, invalid_shells
-st.plotly_chart(make_profiles(r,reference,coord,axis,log),width='stretch')
+st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x),width='stretch')
 st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points are excluded.')
 if invalid_shells(df).any():
     st.warning('Red shading and solid red lines mark shells with negative radius, mass, luminosity, opacity or energy generation; nonpositive temperature, pressure or density; or nonfinite values. These are invalid computed values, not a physical stellar region. Nonpositive values are omitted on logarithmic axes. On the mass axis, only lines are used because the coordinate can reverse in failed models.')
@@ -98,7 +101,7 @@ if reference and (reference['flag']!=0 or reference['error']):
     st.caption('The comparison is also a failed trial. Red diagnostic markers apply to the current model only.')
 st.caption('The starting surface shells are assumed radiative; transport labels come from the solver.')
 with st.expander('Advanced plots: pressure, opacity and temperature gradient'):
-    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True),width='stretch')
+    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x),width='stretch')
 with st.expander('Extrapolated core and numerical diagnostics'):
     st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are residuals, not physical point values.')
     st.json({k:r['core'][k] for k in ['T','rho','P','epsilon','M','L']})
