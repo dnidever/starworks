@@ -36,12 +36,21 @@ r=st.session_state.current
 m,l,t,h,met=r['parameters']
 st.caption(f'Displayed model: M={m:g} M☉ · L={l:g} L☉ · Teff={t:g} K · X={h:g} · Y={1-h-met:g} · Z={met:g}')
 msg=STATUS.get(r['flag'],f"Unknown status {r['flag']}")
-if r['flag']==0 and r['error']==0:
-    st.success(msg+'; inspect the profiles and residuals before accepting the model.')
-else:
-    st.warning(f"{msg}. Integration error code: {r['error']}. Profiles show a trial model, not an accepted solution.")
-st.markdown('**What happened in the core?**')
-st.write(explanation(r))
+import html
+passed=r['flag']==0 and r['error']==0
+headline='Passed the solver core checks' if passed else 'Numerical integration failed' if r['error'] else msg
+background='#ecfdf5' if passed else '#fef2f2'
+border='#16a34a' if passed else '#dc2626'
+text_color='#14532d' if passed else '#7f1d1d'
+st.markdown(
+    f'<div role="status" style="background:{background};border-left:6px solid {border};'
+    f'border-radius:8px;padding:18px 22px;margin:12px 0;color:{text_color};">'
+    f'<div style="font-size:25px;font-weight:800;line-height:1.3;margin-bottom:10px;">'
+    f'{"✓ " if passed else "Model failed: "}{html.escape(headline)}</div>'
+    f'<div style="font-size:18px;line-height:1.5;">{html.escape(explanation(r))}</div></div>',
+    unsafe_allow_html=True)
+if not passed:
+    st.caption(f"Condition flag: {r['flag']} · Integration error: {r['error']}. These profiles describe a failed trial, not an accepted stellar solution.")
 st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
 df=r['profile']; inner=diagnostics(r)
 cols=st.columns(4)
