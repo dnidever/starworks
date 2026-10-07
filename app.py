@@ -24,7 +24,9 @@ with st.sidebar:
 if submitted:
     try:
         with st.spinner('Integrating stellar structure…'):
-            st.session_state.current=calculate(mass,lum,teff,x,z)
+            result=calculate(mass,lum,teff,x,z)
+            st.session_state.previous_trial=st.session_state.get('current')
+            st.session_state.current=result
     except Exception as exc:
         st.error(f'Model failed: {exc}')
 from grid_search import grid_search_ui
@@ -54,8 +56,24 @@ if not passed:
 st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
 df=r['profile']; inner=diagnostics(r)
 cols=st.columns(4)
-for col,label,value in zip(cols,['Radius (R☉)','Innermost r/R','Remaining M/M★','Remaining L/L★'],[r['radius']/6.9599e10,inner['r/R'],inner['M/M★'],inner['L/L★']]):
-    col.metric(label,f'{value:.4g}')
+cols[0].metric('Radius (R☉)',f"{r['radius']/6.9599e10:.4g}")
+cols[1].metric('Innermost r/R',f"{inner['r/R']:.4g}")
+previous=st.session_state.get('previous_trial')
+comparable=previous is not None and tuple(previous['parameters'][i] for i in [0,3,4])==tuple(r['parameters'][i] for i in [0,3,4])
+old=diagnostics(previous) if comparable else None
+for col,label,key in [(cols[2],'Remaining M/M★','M/M★'),(cols[3],'Remaining L/L★','L/L★')]:
+    value=inner[key]
+    change=''
+    if old is not None and np.isfinite([value,old[key]]).all():
+        delta=abs(value)-abs(old[key])
+        direction='↓ smaller' if delta<0 else '↑ larger' if delta>0 else 'unchanged'
+        color='#15803d' if delta<0 else '#b91c1c' if delta>0 else '#475569'
+        change=f'<div style="font-size:14px;color:{color};margin-top:6px;">|Residual|: {direction} ({delta:+.3g}) vs previous trial</div>'
+    with col:
+        st.markdown(f'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;color:#991b1b;">'
+                    f'<div style="font-size:14px;">{label}</div><div style="font-size:30px;font-weight:700;">{value:.5g}</div>{change}</div>',unsafe_allow_html=True)
+if comparable:
+    st.caption(f"Previous trial stopped at r/R={old['r/R']:.4g}; current at {inner['r/R']:.4g}. Smaller absolute residuals alone do not establish improvement when stopping radii differ.")
 st.subheader('Which direction should I try?')
 st.write('Test small changes in luminosity and effective temperature while keeping mass and composition fixed. These tests use the displayed model, even if you have edited the sidebar inputs.')
 step=st.number_input('Adjustment size (%)',min_value=0.01,max_value=10.0,value=1.0,step=0.1)

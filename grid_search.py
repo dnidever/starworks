@@ -72,7 +72,9 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         if st.button('Inspect selected grid trial'):
             row=data.loc[choice]
             try:
-                st.session_state.current=calculate(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
+                result=calculate(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
+                st.session_state.previous_trial=st.session_state.get('current')
+                st.session_state.current=result
                 st.rerun()
             except Exception as exc:st.error(f'Could not inspect trial: {exc}')
         st.download_button('Download grid results (CSV)',data.to_csv(index=False),'starworks_grid.csv','text/csv')
