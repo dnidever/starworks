@@ -86,6 +86,22 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
         st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
         st.caption('Green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
+        matches=data[data.Accepted].copy()
+        if len(matches):
+            st.subheader('Passing models')
+            st.dataframe(matches[['L (L☉)','Teff (K)','r/R','M/M★','L/L★']],hide_index=True,width='stretch')
+            matched=st.selectbox('Passing model to run',matches.index.tolist(),
+                format_func=lambda i:f"L={data.loc[i,'L (L☉)']:.8g} L☉, Teff={data.loc[i,'Teff (K)']:.5f} K",
+                key=f'passing_choice_{st.session_state.get("grid_generation",0)}')
+            if st.button('Run selected passing model',type='primary'):
+                row=data.loc[matched]
+                result=calculate(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
+                st.session_state.previous_trial=st.session_state.get('current')
+                st.session_state.current=result
+                st.session_state.pending_grid_guess=result['parameters']
+                st.rerun()
+        else:
+            st.info('No trials passed the core checks in this grid. Adjust the bounds or refine the grid and search again.')
         with st.expander('Detailed grid results table'):
             st.dataframe(data,hide_index=True,width='stretch')
         indices=list(data.index)
