@@ -31,7 +31,7 @@ with st.sidebar:
     with st.form('parameters'):
         mass=st.number_input('Mass (M☉)',key='guess_mass',min_value=0.1,max_value=100.0,step=0.1,format='%.4f')
         lum=st.number_input('Luminosity (L☉)',key='guess_lum',min_value=0.000001,step=0.001,format='%.5f')
-        teff=st.number_input('Effective temperature (K)',key='guess_teff',min_value=1.0,step=1.0,format='%.1f')
+        teff=st.number_input('Effective temperature (K)',key='guess_teff',min_value=1.0,step=0.01,format='%.6f')
         x=st.number_input('Hydrogen mass fraction X',key='guess_x',min_value=0.001,max_value=0.999,step=0.01,format='%.3f')
         z=st.number_input('Metal mass fraction Z',key='guess_z',min_value=0.000001,max_value=0.5,step=0.001,format='%.6f')
         submitted=st.form_submit_button('Run model',type='primary')
