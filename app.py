@@ -26,7 +26,7 @@ with st.sidebar:
         z=st.number_input('Metal mass fraction Z',key='guess_z',min_value=0.000001,max_value=0.5,step=0.001,format='%.6f')
         submitted=st.form_submit_button('Run model',type='primary')
     st.caption('Helium fraction Y = 1 − X − Z. Luminosity and temperature are trial boundary conditions, not predictions.')
-    st.caption('Initial inputs give a passing 1 M☉ model at X=0.70 and Z=0.008.')
+    st.caption('Initial inputs use your selected 1 M☉ trial at X=0.70 and Z=0.008; inspect the solver status after running.')
 if submitted:
     try:
         with st.spinner('Integrating stellar structure…'):
