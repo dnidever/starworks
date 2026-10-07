@@ -90,6 +90,7 @@ Once those thresholds are met, the solver checks the extrapolated core:
 
 The highlighted remaining mass and luminosity above the plots describe the **last integrated shell**. The plotted points at r=0 use a separate leading-order volume extrapolation of the residuals; those plotted residuals are not used for the solver’s acceptance checks.
 """)
+st.subheader('Last finite-radius shell values and core density check')
 st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
 df=r['profile']; inner=diagnostics(r)
 cols=st.columns(5)
@@ -168,25 +169,29 @@ with st.expander('Plot controls',expanded=True):
         axis=st.radio('Horizontal axis',['Fractional radius','Enclosed mass fraction'],horizontal=True)
     log=y_col.checkbox('Logarithmic positive profiles',value=True)
     log_x=x_col.toggle('Logarithmic x-axis',value=False)
-    cauto,climit,cpoints,ccore=st.columns(4)
-    auto_zoom=cauto.toggle('Automatically zoom into failed core',value=True,disabled=passed)
-    manual=climit.toggle('Limit x-range',value=False)
+    coord='r_fraction' if axis=='Fractional radius' else 'm_fraction'
+    # Reset editable bounds only for a newly displayed model or coordinate scale.
+    range_context=(r['parameters'],coord,log_x,r['flag'],r['error'])
+    if st.session_state.get('range_context')!=range_context:
+        st.session_state.range_context=range_context
+        st.session_state.limit_plot_range=not passed
+        valid=df[(df.r>0)&~invalid_shells(df)&np.isfinite(df[coord])]
+        if log_x:valid=valid[valid[coord]>0]
+        boundary=float(valid.iloc[0][coord]) if len(valid) else .03
+        maximum=min(.3,10*boundary) if boundary>0 else .3
+        minimum=max(boundary*.01,1e-12) if log_x else 0.0
+        st.session_state.plot_xmin=minimum
+        st.session_state.plot_xmax=maximum if maximum>minimum else .3
+    climit,cpoints,ccore=st.columns(3)
+    manual=climit.toggle('Limit x-range',key='limit_plot_range')
     show_points=cpoints.toggle('Show integrated points',value=False)
     show_core=ccore.toggle('Show extrapolated core point',value=True)
     coord='r_fraction' if axis=='Fractional radius' else 'm_fraction'
     x_range=None
-    if not passed and auto_zoom:
-        valid=df[(df.r>0)&~invalid_shells(df)&np.isfinite(df[coord])]
-        if log_x:valid=valid[valid[coord]>0]
-        if len(valid):
-            boundary=float(valid.iloc[0][coord])
-            maximum=min(.3,10*boundary)
-            minimum=max(boundary*.01,1e-12) if log_x else 0.0
-            if maximum>minimum:x_range=(minimum,maximum)
     if manual:
         cmin,cmax=st.columns(2)
-        xmin=cmin.number_input('Minimum x',value=0.001 if log_x else 0.0,format='%.6f')
-        xmax=cmax.number_input('Maximum x',value=0.3,format='%.6f')
+        xmin=cmin.number_input('Minimum x',key='plot_xmin',format='%.6f')
+        xmax=cmax.number_input('Maximum x',key='plot_xmax',format='%.6f')
         if not np.isfinite([xmin,xmax]).all() or xmin>=xmax or (log_x and xmin<=0):
             st.error('Use minimum < maximum, with positive bounds for a logarithmic x-axis.')
         else:x_range=(xmin,xmax)
@@ -198,8 +203,6 @@ with st.expander('Plot controls',expanded=True):
     if cclear.button('Clear comparison'):
         st.session_state.pop('reference',None)
         reference=None
-    if not passed and auto_zoom and not manual and x_range:
-        st.caption(f'Automatic maximum x = {x_range[1]:.5g}: 10× the last valid shell, capped at 0.3.')
     if log_x:st.caption('Logarithmic axes omit zero and negative coordinates, including the zero-radius core point.')
     if show_core:st.caption('Open diamonds show extrapolated core values. Core mass and luminosity are approximate residuals, not integrated points.')
     if reference:st.caption('Comparison curves are wide and translucent; current curves are thin and dark.')
