@@ -21,7 +21,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         center_t=current['parameters'][2] if current else 5513.5
         st.write(f'Search at fixed mass {mass:g} M☉, X={x:g}, Z={z:g}. '+('These are the displayed model’s parameters.' if current else 'These are the sidebar mass and composition.'))
         for key,value in zip(['grid_low_l','grid_high_l','grid_low_t','grid_high_t'],
-                             [center_l*.95,center_l*1.05,center_t*.95,center_t*1.05]):
+                             [center_l*.90,center_l*1.10,center_t*.90,center_t*1.10]):
             st.session_state.setdefault(key,float(value))
         pending=st.session_state.pop('pending_search_bounds',None)
         if pending:
