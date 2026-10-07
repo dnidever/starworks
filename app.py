@@ -10,7 +10,7 @@ st.caption('Explore homogeneous main-sequence models with STATSTAR. Adjust the s
 @st.cache_data(max_entries=200,show_spinner=False)
 def calculate(*pars):
     return run_model(*pars)
-for key,value in {'guess_mass':1.0,'guess_lum':0.86071,'guess_teff':5500.2,'guess_x':.70,'guess_z':.008}.items():
+for key,value in {'guess_mass':1.0,'guess_lum':0.843496,'guess_teff':5445.20,'guess_x':.70,'guess_z':.008}.items():
     st.session_state.setdefault(key,value)
 pending=st.session_state.pop('pending_grid_guess',None)
 if pending:
@@ -26,7 +26,7 @@ with st.sidebar:
         z=st.number_input('Metal mass fraction Z',key='guess_z',min_value=0.000001,max_value=0.5,step=0.001,format='%.6f')
         submitted=st.form_submit_button('Run model',type='primary')
     st.caption('Helium fraction Y = 1 − X − Z. Luminosity and temperature are trial boundary conditions, not predictions.')
-    st.caption('Initial inputs reproduce the 1 M☉ trial from your notebook.')
+    st.caption('Initial inputs give a passing 1 M☉ model at X=0.70 and Z=0.008.')
 if submitted:
     try:
         with st.spinner('Integrating stellar structure…'):

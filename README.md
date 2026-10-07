@@ -68,3 +68,5 @@ The intermediate inward step is now R/200 rather than R/100: the initial R/1000 
 The main step stays at R/1000 through the surface and interior; it never increases at the 99%-mass threshold. Near the center, the existing half-remaining-radius rule reduces it to R/5000. The shell limit is 5000. Both reference and compiled solvers use these settings. Earlier step-transition descriptions and timings above document prior versions. Previously accepted input parameters may need retuning with the smaller steps.
 
 Default grid bounds are ±2% in luminosity and ±1% in effective temperature around the displayed trial (or initial trial before a model is run). Bounds remain editable.
+
+Current default 1 M☉ trial: L=0.843496 L☉, Teff=5445.20 K, X=0.70, Z=0.008. Verified to pass with the current integration settings.

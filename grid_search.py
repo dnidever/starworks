@@ -15,8 +15,8 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         mass,x,z=sidebar_parameters
         if current:
             mass,_,_,x,z=current['parameters']
-        center_l=current['parameters'][1] if current else .86071
-        center_t=current['parameters'][2] if current else 5500.2
+        center_l=current['parameters'][1] if current else .843496
+        center_t=current['parameters'][2] if current else 5445.20
         st.write(f'Search at fixed mass {mass:g} M☉, X={x:g}, Z={z:g}. '+('These are the displayed model’s parameters.' if current else 'These are the sidebar mass and composition.'))
         with st.form('grid_controls'):
             a,b=st.columns(2)
