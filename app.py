@@ -7,9 +7,19 @@ from model_runner import run_model, STATUS, diagnostics, explanation
 st.set_page_config(page_title='StarWorks',page_icon='☀️',layout='wide')
 st.title('StarWorks')
 st.caption('Explore homogeneous main-sequence models with STATSTAR. Adjust the surface conditions, integrate inward, and inspect the interior.')
+from solver_version import SOLVER_REVISION
 @st.cache_data(max_entries=200,show_spinner=False)
-def calculate(*pars):
+def cached_calculate(pars,solver_revision):
     return run_model(*pars)
+def calculate(*pars):
+    return cached_calculate(pars,SOLVER_REVISION)
+if st.session_state.get('solver_revision')!=SOLVER_REVISION:
+    had_results='current' in st.session_state or 'grid_result' in st.session_state
+    for key in ['current','previous_trial','reference','grid_result','direction_tests','pending_grid_guess']:
+        st.session_state.pop(key,None)
+    st.session_state.solver_revision=SOLVER_REVISION
+    if had_results:
+        st.info('The solver was updated. Previous model and grid results were cleared; run your trial or grid again.')
 for key,value in {'guess_mass':1.0,'guess_lum':0.843496,'guess_teff':5445.20,'guess_x':.70,'guess_z':.008}.items():
     st.session_state.setdefault(key,value)
 pending=st.session_state.pop('pending_grid_guess',None)

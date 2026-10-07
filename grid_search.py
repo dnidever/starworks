@@ -5,9 +5,10 @@ import plotly.graph_objects as go
 import streamlit as st
 from model_runner import STATUS,diagnostics
 from fast_grid import grid_summary
+from solver_version import SOLVER_REVISION
 
 @st.cache_data(max_entries=30,show_spinner=False)
-def cached_grid(mass,x,z,ls,ts):
+def cached_grid(mass,x,z,ls,ts,solver_revision):
     return grid_summary(mass,x,z,ls,ts)
 
 def grid_search_ui(calculate, sidebar_parameters, current):
@@ -39,7 +40,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
                     st.error('Use positive X and Z with X + Z < 1.')
                     return
                 with st.spinner('Searching trial models… The first search after a restart may take longer while the solver compiles.'):
-                    results=cached_grid(float(mass),float(x),float(z),ls,ts)
+                    results=cached_grid(float(mass),float(x),float(z),ls,ts,SOLVER_REVISION)
                 for trial_l,trial_t,flag,error,rr,mm,ll in results:
                     flag=int(flag);error=int(error)
                     rows.append({'L (L☉)':trial_l,'Teff (K)':trial_t,'Accepted':flag==0 and error==0,
