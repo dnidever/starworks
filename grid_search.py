@@ -61,16 +61,16 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         for i,color in enumerate(colors):scale.extend([(i/9,color),((i+1)/9,color)])
         matrix=data.Flag.to_numpy().reshape(len(grid['ls']),len(grid['ts']))
         display_matrix=np.vectorize({flag:i for i,flag in enumerate(flag_order)}.__getitem__)(matrix)
-        fig=go.Figure(go.Heatmap(x=grid['ts'],y=grid['ls'],z=display_matrix,zmin=-.5,zmax=8.5,colorscale=scale,
-            customdata=data.Status.to_numpy().reshape(matrix.shape),hovertemplate='Teff=%{x:.2f} K<br>L=%{y:.6g} L☉<br>%{customdata}<extra></extra>',
+        fig=go.Figure(go.Heatmap(x=grid['ts'].tolist(),y=grid['ls'].tolist(),z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
+            customdata=data.Status.to_numpy().reshape(matrix.shape).tolist(),hovertemplate='Teff=%{x:.2f} K<br>L=%{y:.6g} L☉<br>%{customdata}<extra></extra>',
             colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed'])))
         fig.update_layout(height=440,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
         if grid['log_l']:fig.update_yaxes(type='log')
         # Heatmaps do not expose point selection in Streamlit. A transparent
         # scatter layer provides selectable trial centers over the same map.
-        fig.add_trace(go.Scattergl(x=data['Teff (K)'],y=data['L (L☉)'],mode='markers',
+        fig.add_trace(go.Scatter(x=data['Teff (K)'].tolist(),y=data['L (L☉)'].tolist(),mode='markers',
             marker=dict(symbol='square',size=max(4,min(28,360/max(len(grid['ls']),len(grid['ts']))))),opacity=.01,
-            customdata=data.index.to_numpy(),showlegend=False,hoverinfo='skip',name='Select trial'))
+            customdata=data.index.tolist(),showlegend=False,hoverinfo='skip',name='Select trial'))
         chart_key=f"grid_map_{st.session_state.get('grid_generation',0)}"
         def choose_grid_point():
             event=st.session_state.get(chart_key,{})
