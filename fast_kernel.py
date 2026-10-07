@@ -139,7 +139,7 @@ def fundeq(r, f, irc, X, Z, XCNO, mu, izone):
 def integrate(Msolar, Lsolar, Te, X, Z):
     istop = 0
     ip1 = 0
-    '\n    Main program for calculating stellar structure\n\n    Variables, run-time parameters and settings:\n\n    deltar = radius integration step\n    idrflg = set size flag\n           = 0 (initial surface step size of Rs/1000.)\n           = 1 (standard step size of Rs/100.)\n           = 2 (core step size of Rs/5000.)\n  \n    Nstart = number of steps for which starting equations are to be used\n             (the outermost zone is assumed to be radiative)\n    Nstop = maximum number of allowed zones in the star\n    Igoof = final model condition flag\n          = -1 (number of zones exceeded; also the initial value)\n          =  0 (good model)\n          =  1 (core density was extreme)\n          =  2 (core luminosity was extreme)\n          =  3 (extrapolated core temperature is too low)\n          =  4 (mass became negative before center was reached)\n          =  5 (luminosity became negative before center was reached)\n    X, Y, Z = mass fractions of hydrogen, helium, and metals\n    T0, P0 = surface temperature and pressure (T0 = P0 = 0 is assumed)\n    Ms, Ls, Rs = mass, luminosity, and radius of the star (cgs units)\n    '
+    '\n    Main program for calculating stellar structure\n\n    Variables, run-time parameters and settings:\n\n    deltar = radius integration step\n    idrflg = set size flag\n           = 0 (initial surface step size of Rs/1000.)\n           = 1 (standard step size of Rs/200.)\n           = 2 (core step size of Rs/5000.)\n  \n    Nstart = number of steps for which starting equations are to be used\n             (the outermost zone is assumed to be radiative)\n    Nstop = maximum number of allowed zones in the star\n    Igoof = final model condition flag\n          = -1 (number of zones exceeded; also the initial value)\n          =  0 (good model)\n          =  1 (core density was extreme)\n          =  2 (core luminosity was extreme)\n          =  3 (extrapolated core temperature is too low)\n          =  4 (mass became negative before center was reached)\n          =  5 (luminosity became negative before center was reached)\n    X, Y, Z = mass fractions of hydrogen, helium, and metals\n    T0, P0 = surface temperature and pressure (T0 = P0 = 0 is assumed)\n    Ms, Ls, Rs = mass, luminosity, and radius of the star (cgs units)\n    '
     nsh = 999
     r = np.zeros(nsh, float)
     P = np.zeros(nsh, float)
@@ -290,7 +290,7 @@ def integrate(Msolar, Lsolar, Te, X, Z):
             istop = i
             break
         if idrflg == 0 and M_r[i] < 0.99 * Ms:
-            deltar = -1.0 * Rs / 100.0
+            deltar = -1.0 * Rs / 200.0
             idrflg = 1
         if idrflg == 1 and abs(deltar) >= 0.5 * r[i]:
             deltar = -1.0 * Rs / 5000.0

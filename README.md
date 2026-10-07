@@ -58,3 +58,7 @@ The numerical integration and grid loop compile with Numba. The grid computes co
 Local warm benchmark for 225 models: 4.60 s with the Python reference versus 0.064 s with the compiled grid (about 72×). Deployment hardware and display overhead affect total user-visible time. All flags, shell counts and profile columns matched the reference across 67 test models.
 
 `starmodel.py` remains the reference. `fast_kernel.py` is generated from its numerical functions by `python scripts/build_fast_solver.py`; regenerate and run `python -m unittest discover -s tests` after solver changes. `fast_solver.py` reconstructs profile output; `fast_grid.py` handles compiled grid summaries.
+
+## Smaller step transition
+
+The intermediate inward step is now R/200 rather than R/100: the initial R/1000 step increases by a factor of five when enclosed mass drops below 99%. The core step rule is unchanged. Both Python and Numba versions use this rule. Results can shift slightly: the initial notebook trial no longer passes the density check; a nearby passing trial is L=0.8598766667 L☉, Teff=5496.866667 K at M=1 M☉, X=0.70, Z=0.008. Earlier benchmark timings predate this step change.

@@ -274,7 +274,7 @@ def starmodel(Msolar,Lsolar,Te,X,Z,verbose=True, output_path=None):
     deltar = radius integration step
     idrflg = set size flag
            = 0 (initial surface step size of Rs/1000.)
-           = 1 (standard step size of Rs/100.)
+           = 1 (standard step size of Rs/200.)
            = 2 (core step size of Rs/5000.)
   
     Nstart = number of steps for which starting equations are to be used
@@ -619,7 +619,7 @@ def starmodel(Msolar,Lsolar,Te,X,Z,verbose=True, output_path=None):
         #  Is it time to change the step size?
         #
         if ((idrflg == 0) and (M_r[i] < (0.99*Ms))):
-            deltar = (-1.0)*Rs/100.0
+            deltar = (-1.0)*Rs/200.0
             idrflg = 1
 
         if ((idrflg == 1) and (abs(deltar) >= (0.5*r[i]))):
