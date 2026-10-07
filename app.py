@@ -94,6 +94,7 @@ if st.toggle('Limit x-range',value=False):
     else:
         x_range=(xmin,xmax)
 
+show_points=st.toggle('Show integrated points',value=False)
 show_core=st.toggle('Show extrapolated core point',value=True)
 if show_core:
     st.caption('Open diamonds show the extrapolated core. Core mass and luminosity are extrapolated residuals using the last shell’s density and energy generation held constant over the remaining core volume; opacity and gradient are copied from the last shell. The zero-radius point cannot appear on a logarithmic radius axis.')
@@ -106,9 +107,9 @@ if c2.button('Clear comparison'):
     st.session_state.pop('reference',None)
     reference=None
 if reference:
-    st.caption('Comparison: wide translucent curves with open circles. Current model: thin darker curves with filled circles, drawn on top.')
+    st.caption('Comparison: wide translucent curves. Current model: thin darker curves, drawn on top. When points are enabled, comparison points are open circles and current points are filled circles.')
 from plots import make_profiles, invalid_shells
-st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core),width='stretch')
+st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core,show_points=show_points),width='stretch')
 st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points appear only when enabled.')
 if invalid_shells(df).any():
     st.warning('Red shading and solid red lines mark shells with negative radius, mass, luminosity, opacity or energy generation; nonpositive temperature, pressure or density; or nonfinite values. These are invalid computed values, not a physical stellar region. Nonpositive values are omitted on logarithmic axes. On the mass axis, only lines are used because the coordinate can reverse in failed models.')
@@ -118,7 +119,7 @@ if reference and (reference['flag']!=0 or reference['error']):
     st.caption('The comparison is also a failed trial. Red diagnostic markers apply to the current model only.')
 st.caption('The starting surface shells are assumed radiative; transport labels come from the solver.')
 with st.expander('Advanced plots: pressure, opacity and temperature gradient'):
-    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x,x_range=x_range,show_core=show_core),width='stretch')
+    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x,x_range=x_range,show_core=show_core,show_points=show_points),width='stretch')
 with st.expander('Extrapolated core and numerical diagnostics'):
     st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are extrapolated residuals, not physical point values. They use M₀ ≈ Mᵢ − (4π/3)ρᵢrᵢ³ and L₀ ≈ Lᵢ − (4π/3)ρᵢεᵢrᵢ³. This is a leading-order approximation, not another integration.')
     st.json({k:r['core'][k] for k in ['T','rho','P','epsilon','M','L']})

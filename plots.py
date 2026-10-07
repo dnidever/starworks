@@ -12,7 +12,7 @@ def invalid_shells(data):
     bad &= ~surface
     return np.asarray(bad)
 
-def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None, show_core=False):
+def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None, show_core=False, show_points=False):
     panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')]] if advanced else [
         [('T','Temperature','K'),('rho','Density','g cm⁻³')],
         [('m_fraction','Mass fraction',''),('l_fraction','Luminosity fraction','')],
@@ -39,7 +39,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     valid_x=np.isfinite(xvalues)&(xvalues>0)
                     xvalues=np.where(valid_x,xvalues,np.nan)
                     y=np.where(valid_x,y,np.nan)
-                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers',opacity=.35 if name=='Comparison' else 1.0,marker=dict(size=4 if name=='Comparison' else 5,symbol='circle-open' if name=='Comparison' else 'circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=(['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],width=7 if name=='Comparison' else 2,dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers' if show_points else 'lines',opacity=.35 if name=='Comparison' else 1.0,marker=dict(size=4 if name=='Comparison' else 5,symbol='circle-open' if name=='Comparison' else 'circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=(['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],width=7 if name=='Comparison' else 2,dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
                 if show_core and q!='transport':
                     core=model['core']
                     raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
