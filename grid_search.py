@@ -20,12 +20,19 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         center_l=current['parameters'][1] if current else .8652
         center_t=current['parameters'][2] if current else 5513.5
         st.write(f'Search at fixed mass {mass:g} M☉, X={x:g}, Z={z:g}. '+('These are the displayed model’s parameters.' if current else 'These are the sidebar mass and composition.'))
+        for key,value in zip(['grid_low_l','grid_high_l','grid_low_t','grid_high_t'],
+                             [center_l*.98,center_l*1.02,center_t*.99,center_t*1.01]):
+            st.session_state.setdefault(key,float(value))
+        pending=st.session_state.pop('pending_search_bounds',None)
+        if pending:
+            for key,value in zip(['grid_low_l','grid_high_l','grid_low_t','grid_high_t'],pending):
+                st.session_state[key]=float(value)
         with st.form('grid_controls'):
             a,b=st.columns(2)
-            low_l=a.number_input('Minimum luminosity (L☉)',min_value=.000001,value=float(center_l*.98),step=0.02,format='%.6f')
-            high_l=b.number_input('Maximum luminosity (L☉)',min_value=.000001,value=float(center_l*1.02),step=0.02,format='%.6f')
-            low_t=a.number_input('Minimum temperature (K)',min_value=1.0,value=float(center_t*.99),step=10.0)
-            high_t=b.number_input('Maximum temperature (K)',min_value=1.0,value=float(center_t*1.01),step=10.0)
+            low_l=a.number_input('Minimum luminosity (L☉)',key='grid_low_l',min_value=.000001,value=None,step=0.02,format='%.6f')
+            high_l=b.number_input('Maximum luminosity (L☉)',key='grid_high_l',min_value=.000001,value=None,step=0.02,format='%.6f')
+            low_t=a.number_input('Minimum temperature (K)',key='grid_low_t',min_value=1.0,value=None,step=10.0)
+            high_t=b.number_input('Maximum temperature (K)',key='grid_high_t',min_value=1.0,value=None,step=10.0)
             nl=a.number_input('Luminosity samples',min_value=3,max_value=200,value=50,step=1)
             nt=b.number_input('Temperature samples',min_value=3,max_value=200,value=50,step=1)
             log_l=st.checkbox('Logarithmic luminosity spacing',value=False)
@@ -68,8 +75,16 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         for i,color in enumerate(colors):scale.extend([(i/9,color),((i+1)/9,color)])
         matrix=data.Flag.to_numpy().reshape(len(grid['ls']),len(grid['ts']))
         display_matrix=np.vectorize({flag:i for i,flag in enumerate(flag_order)}.__getitem__)(matrix)
+        # A residual heuristic, not a measurement of all core mismatches.
+        residual=np.maximum.reduce([np.abs(data['M/M★'].to_numpy())/.01,
+                                    np.abs(data['L/L★'].to_numpy())/.1,
+                                    np.abs(data['r/R'].to_numpy())/.02])
+        eligible=(data.Flag>=0)&np.isfinite(residual)
+        score=np.where(eligible,1/(1+residual),np.nan)
+        score=np.where(data.Accepted,1.0,np.minimum(score,.99))
+        data['Promise score']=score
         map_quantity=st.selectbox('Map coloring',[
-            'Model status','Remaining mass (M/M★)',
+            'Model status','Promising models','Remaining mass (M/M★)',
             'Remaining luminosity (L/L★)','Last finite shell radius (r/R)'],
             key='grid_map_quantity')
         hover='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<extra></extra>'
@@ -77,6 +92,9 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         if map_quantity=='Model status':
             heatmap_options=dict(z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
                 colorbar=dict(tickvals=list(range(9)),ticktext=status_labels))
+        elif map_quantity=='Promising models':
+            heatmap_options=dict(z=score.reshape(matrix.shape).tolist(),zmin=0,zmax=1,
+                colorscale='Viridis',colorbar=dict(title=dict(text='Promise score')))
         else:
             column={'Remaining mass (M/M★)':'M/M★',
                     'Remaining luminosity (L/L★)':'L/L★',
@@ -110,14 +128,46 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             index=int(point.get('point_index',point.get('point_number',-1)))
             if not 0<=index<len(data):return
             row=data.iloc[index]
+            st.session_state.grid_focus_index=index
             st.session_state.pending_grid_guess=(mass,float(row['L (L☉)']),float(row['Teff (K)']),x,z)
         _,map_column,_=st.columns([1,3,1])
         with map_column:
             st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
         st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
-        if map_quantity!='Model status':
+        if map_quantity=='Promising models':
+            st.caption('Higher is more promising: the score uses the largest absolute mass, luminosity, or radius residual divided by its core threshold. Passing models score 1; failures remain below 1. Numerical errors and integration limits are blank. Density, energy generation, and temperature mismatch sizes are not included, so this is guidance, not an acceptance test.')
+        elif map_quantity!='Model status':
             st.caption('Colors show the signed last finite shell value as a fraction of the total stellar mass, luminosity, or radius. Missing values appear as gaps. Hover to see each model’s status and diagnostics.')
         st.caption('In the Model status view, green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
+        candidates=data.loc[eligible].sort_values(['Accepted','Promise score'],ascending=False)
+        if len(candidates):
+            best=candidates.iloc[0]
+            directions=[]
+            for col,axis,values in [('Teff (K)','temperature',grid['ts']),('L (L☉)','luminosity',grid['ls'])]:
+                fraction=(best[col]-values[0])/(values[-1]-values[0])
+                if fraction<=.1:directions.append(f'extend {axis} downward')
+                elif fraction>=.9:directions.append(f'extend {axis} upward')
+            advice=('Try '+', and '.join(directions)+'.') if directions else 'Try a finer search around this trial within the current bounds.'
+            st.info(f"{'A passing' if best.Accepted else 'The highest-ranked non-error'} trial is L={best['L (L☉)']:.8g} L☉, Teff={best['Teff (K)']:.6f} K. {advice} This suggestion follows the sampled results; it does not establish a unique direction toward a solution.")
+        else:
+            st.info('No trials provide usable residual guidance. Try bounds around a model that integrates successfully.')
+        focus_options=candidates.index.tolist()+[i for i in data.index if i not in candidates.index]
+        focus_key=f"grid_focus_{st.session_state.get('grid_generation',0)}"
+        clicked=st.session_state.pop('grid_focus_index',None)
+        if clicked in focus_options:st.session_state[focus_key]=clicked
+        focus=st.selectbox('Trial to center the next search on',focus_options,key=focus_key,
+            format_func=lambda i:f"L={data.loc[i,'L (L☉)']:.8g} L☉, Teff={data.loc[i,'Teff (K)']:.6f} K — {data.loc[i,'Status']}")
+        if st.button('Search around this trial'):
+            row=data.loc[focus]
+            # Half the old width, shifted to the selected trial; keep sample counts.
+            dl=float(grid['ls'][-1]-grid['ls'][0])/4
+            dt=float(grid['ts'][-1]-grid['ts'][0])/4
+            st.session_state.pending_search_bounds=(max(.000001,float(row['L (L☉)'])-dl),
+                float(row['L (L☉)'])+dl,max(1.,float(row['Teff (K)'])-dt),float(row['Teff (K)'])+dt)
+            st.session_state.search_bounds_prepared=True
+            st.rerun()
+        if st.session_state.pop('search_bounds_prepared',False):
+            st.success('Finer bounds loaded above. Click Run grid search to evaluate them.')
         matches=data[data.Accepted].copy()
         if len(matches):
             st.subheader('Passing models')
