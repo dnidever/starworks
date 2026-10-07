@@ -13,12 +13,12 @@ def invalid_shells(data):
     return np.asarray(bad)
 
 def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None, show_core=False, show_points=False):
-    panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')]] if advanced else [
+    panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')],[('transport','Transport','')]] if advanced else [
         [('T','Temperature','K'),('rho','Density','g cm⁻³')],
         [('m_fraction','Mass fraction',''),('l_fraction','Luminosity fraction','')],
         [('epsilon','Energy generation','erg g⁻¹ s⁻¹')],
-        [('transport','Transport','')]]
-    titles=['Pressure','Opacity','Temperature gradient'] if advanced else ['Temperature and density / respective maxima','Enclosed mass and luminosity / totals','Nuclear energy generation','Energy transport']
+        [('rho','Density','g cm⁻³')]]
+    titles=['Pressure','Opacity','Temperature gradient','Energy transport'] if advanced else ['Temperature and density / respective maxima','Enclosed mass and luminosity / totals','Nuclear energy generation','Density (g cm⁻³)']
     fig=make_subplots(rows=2,cols=2,subplot_titles=titles)
     for i,panel in enumerate(panels):
         row,col=i//2+1,i%2+1
@@ -28,10 +28,10 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
             for j,(q,label,unit) in enumerate(panel):
                 raw=(data.zone=='c').astype(float).to_numpy() if q=='transport' else data[q].to_numpy()
                 y=raw.copy()
-                if not advanced and q in ['T','rho']:
+                if not advanced and i==0 and q in ['T','rho']:
                     pos=raw[np.isfinite(raw)&(raw>0)]
                     y=raw/pos.max() if len(pos) else np.full(len(raw),np.nan)
-                if log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2]):
+                if log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2,3]):
                     y=np.where(y>0,y,np.nan)
                     fig.update_yaxes(type='log',row=row,col=col)
                 xvalues=data[coord].to_numpy().copy()
@@ -45,9 +45,9 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
                     core_x=0.0  # At the geometric center, enclosed mass coordinate is zero.
                     core_y=raw_core
-                    if not advanced and q in ['T','rho']:
+                    if not advanced and i==0 and q in ['T','rho']:
                         core_y=raw_core/pos.max() if len(pos) else np.nan
-                    logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2])
+                    logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2,3])
                     if np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
                         if q in ['m_fraction','l_fraction']:
                             valid_end=np.flatnonzero(np.isfinite(xvalues)&np.isfinite(y))
@@ -113,15 +113,16 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
             if len(positive):
                 fig.add_vline(x=float(positive.iloc[0][coord]),line_color='red',line_dash='dash',line_width=2,row=row,col=col)
         fig.update_xaxes(title_text=axis,type='log' if log_x else 'linear',row=row,col=col)
-        if not advanced and i==3:
+        if advanced and i==3:
             fig.update_yaxes(tickvals=[0,1],ticktext=['Radiative','Convective'],range=[-.1,1.1],row=row,col=col)
+        if not advanced and i==3: fig.update_yaxes(title_text='g cm⁻³',row=row,col=col)
         if not advanced and i==2: fig.update_yaxes(title_text='erg g⁻¹ s⁻¹',row=row,col=col)
     for i in range(len(panels)):
         suffix='' if i==0 else str(i+1)
         xdomain=fig.layout['xaxis'+suffix].domain
         ydomain=fig.layout['yaxis'+suffix].domain
         bottom=not advanced and i in [0,1,2]
-        left=not advanced and i in [0,2]
+        left=not advanced and i in [0,2,3]
         fig.update_layout(**{'legend'+suffix:dict(
             x=xdomain[0]+.2*(xdomain[1]-xdomain[0]) if left else xdomain[1]-.01,
             y=ydomain[0]+.015 if bottom else ydomain[1]-.015,

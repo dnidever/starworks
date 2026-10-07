@@ -185,7 +185,7 @@ if r['flag']!=0 or r['error']:
 if reference and (reference['flag']!=0 or reference['error']):
     st.caption('The comparison is also a failed trial. Red diagnostic markers apply to the current model only.')
 st.caption('The starting surface shells are assumed radiative; transport labels come from the solver.')
-with st.expander('Advanced plots: pressure, opacity and temperature gradient'):
+with st.expander('Advanced plots: pressure, opacity, temperature gradient and energy transport'):
     st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x,x_range=x_range,show_core=show_core,show_points=show_points),width='stretch')
 with st.expander('Extrapolated core and numerical diagnostics'):
     st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are extrapolated residuals, not physical point values. They use M₀ ≈ Mᵢ − (4π/3)ρᵢrᵢ³ and L₀ ≈ Lᵢ − (4π/3)ρᵢεᵢrᵢ³. This is a leading-order approximation, not another integration.')
