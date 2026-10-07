@@ -174,7 +174,10 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                 values=np.log10(visible) if logarithmic else np.asarray(visible)
                 low,high=float(np.min(values)),float(np.max(values))
                 padding=max((high-low)*.08,.05 if logarithmic else max(abs(low),abs(high),1e-12)*.05)
-                fig.update_layout(**{layout_name:dict(range=[low-padding,high+padding],autorange=False)})
+                lower=low-padding
+                if not logarithmic and low>=0:
+                    lower=max(0.0,lower)
+                fig.update_layout(**{layout_name:dict(range=[lower,high+padding],autorange=False)})
     elif coord=='r_fraction' and not log_x:
         xmax=max(float(model['profile'].r_fraction.max()) for model in [current,reference] if model is not None)
         fig.update_xaxes(range=[0,xmax],autorange=False)
