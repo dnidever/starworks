@@ -19,6 +19,10 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
         [('epsilon','Energy generation','erg g⁻¹ s⁻¹')],
         [('rho','Density','g cm⁻³')]]
     titles=['Pressure','Opacity','Temperature gradient','Energy transport'] if advanced else ['Temperature and pressure / respective maxima','Enclosed mass and luminosity / totals','Nuclear energy generation','Density (g cm⁻³)']
+    density_linear=not advanced and show_core and any(
+        model is not None and np.isfinite(model['core']['rho']) and model['core']['rho']<=0
+        for model in [current,reference])
+    if density_linear:titles[3]='Density (g cm⁻³) — linear to show nonpositive core'
     fig=make_subplots(rows=2,cols=2,subplot_titles=titles)
     for i,panel in enumerate(panels):
         row,col=i//2+1,i%2+1
@@ -31,7 +35,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                 if not advanced and i==0 and q in ['T','P']:
                     pos=raw[np.isfinite(raw)&(raw>0)]
                     y=raw/pos.max() if len(pos) else np.full(len(raw),np.nan)
-                if log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2,3]):
+                if log and (advanced and q in ['P','kappa'] or not advanced and (i in [0,2] or i==3 and not density_linear)):
                     y=np.where(y>0,y,np.nan)
                     fig.update_yaxes(type='log',row=row,col=col)
                 xvalues=data[coord].to_numpy().copy()
@@ -47,7 +51,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     core_y=raw_core
                     if not advanced and i==0 and q in ['T','P']:
                         core_y=raw_core/pos.max() if len(pos) else np.nan
-                    logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2,3])
+                    logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and (i in [0,2] or i==3 and not density_linear))
                     if np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
                         if q in ['m_fraction','l_fraction']:
                             valid_end=np.flatnonzero(np.isfinite(xvalues)&np.isfinite(y))
@@ -61,7 +65,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                                     hovertemplate='Connection to extrapolated core<extra>'+name+'</extra>'),row=row,col=col)
                         fig.add_trace(go.Scatter(x=[core_x],y=[core_y],mode='markers',showlegend=False,
                             opacity=.35 if name=='Comparison' else 1.0,
-                            marker=dict(symbol='diamond-open',size=15 if name=='Comparison' else 12,color='red' if name=='Current' and q=='rho' and current['flag']==1 else (['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],line=dict(width=2)),
+                            marker=dict(symbol='diamond-open',size=15 if name=='Comparison' else 12,color='red' if name=='Current' and q=='rho' and (current['flag']==1 or core['rho']<=0) else (['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],line=dict(width=2)),
                             name=f'{name}: extrapolated core',customdata=[raw_core],
                             hovertemplate=f'Extrapolated core: {label}=%{{customdata:.4g}} {unit}<br>{axis}=%{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
         if not advanced and i==1:

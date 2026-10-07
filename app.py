@@ -206,6 +206,8 @@ with st.expander('Plot controls',expanded=True):
     if show_core:st.caption('Open diamonds show extrapolated core values. Core mass and luminosity are approximate residuals, not integrated points.')
     if reference:st.caption('Comparison curves are wide and translucent; current curves are thin and dark.')
 st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core,show_points=show_points),width='stretch')
+if show_core and r['core']['rho']<=0:
+    st.caption('The density panel uses a linear y-axis to show the nonpositive inferred core density in red. Turn off logarithmic x scaling to see the core at r=0.')
 st.caption('Temperature and pressure are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points appear only when enabled.')
 if invalid_shells(df).any():
     st.warning('Red shading and solid red lines mark shells with negative radius, mass, luminosity, opacity or energy generation; nonpositive temperature, pressure or density; or nonfinite values. These are invalid computed values, not a physical stellar region. Nonpositive values are omitted on logarithmic axes. On the mass axis, only lines are used because the coordinate can reverse in failed models.')
