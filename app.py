@@ -45,7 +45,27 @@ if submitted:
             st.session_state.current=result
     except Exception as exc:
         st.error(f'Model failed: {exc}')
-model_tab,adjustment_tab,grid_tab=st.tabs(['Model','Adjustment tests','Grid search'])
+st.markdown("""
+<style>
+.stTabs [data-baseweb="tab-list"] {
+    gap: 12px; padding: 8px 0 14px; flex-wrap: wrap;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 58px; padding: 10px 24px; border: 1px solid #94a3b8;
+    border-radius: 10px; background: rgba(148,163,184,0.10);
+}
+.stTabs [data-baseweb="tab"] p {
+    font-size: 20px; font-weight: 700;
+}
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background: #dbeafe; color: #1e3a8a; border: 2px solid #2563eb;
+    box-shadow: 0 2px 5px rgba(37,99,235,0.15);
+}
+.stTabs [data-baseweb="tab"]:hover { border-color: #2563eb; }
+.stTabs [data-baseweb="tab-highlight"] { display: none; }
+</style>
+""",unsafe_allow_html=True)
+model_tab,adjustment_tab,grid_tab=st.tabs(['☀️ Model','↔️ Adjustment tests','▦ Grid search'])
 from grid_search import grid_search_ui
 with grid_tab:
     grid_search_ui(calculate,(mass,x,z),st.session_state.get('current'))
