@@ -39,11 +39,11 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     valid_x=np.isfinite(xvalues)&(xvalues>0)
                     xvalues=np.where(valid_x,xvalues,np.nan)
                     y=np.where(valid_x,y,np.nan)
-                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers',marker=dict(size=3,symbol='circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers',marker=dict(size=5,symbol='circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
                 if show_core and q!='transport':
                     core=model['core']
                     raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
-                    core_x=0.0 if coord=='r_fraction' else core['M']/(model['parameters'][0]*1.989e33)
+                    core_x=0.0  # At the geometric center, enclosed mass coordinate is zero.
                     core_y=raw_core
                     if not advanced and q in ['T','rho']:
                         core_y=raw_core/pos.max() if len(pos) else np.nan
@@ -109,4 +109,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
     if x_range is not None:
         bounds=np.log10(x_range).tolist() if log_x else list(x_range)
         fig.update_xaxes(range=bounds,autorange=False)
+    elif coord=='r_fraction' and not log_x:
+        xmax=max(float(model['profile'].r_fraction.max()) for model in [current,reference] if model is not None)
+        fig.update_xaxes(range=[0,xmax],autorange=False)
     return fig

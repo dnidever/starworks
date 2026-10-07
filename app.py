@@ -96,7 +96,7 @@ if st.toggle('Limit x-range',value=False):
 
 show_core=st.toggle('Show extrapolated core point',value=True)
 if show_core:
-    st.caption('Open diamonds show the extrapolated core. Core mass and luminosity are remaining residuals; opacity and gradient are copied from the last shell. The zero-radius point cannot appear on a logarithmic radius axis.')
+    st.caption('Open diamonds show the extrapolated core. Core mass and luminosity are extrapolated residuals using the last shell’s density and energy generation held constant over the remaining core volume; opacity and gradient are copied from the last shell. The zero-radius point cannot appear on a logarithmic radius axis.')
 reference=st.session_state.get('reference')
 c1,c2=st.columns(2)
 if c1.button('Keep current model as comparison'):
@@ -118,7 +118,7 @@ st.caption('The starting surface shells are assumed radiative; transport labels 
 with st.expander('Advanced plots: pressure, opacity and temperature gradient'):
     st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x,x_range=x_range,show_core=show_core),width='stretch')
 with st.expander('Extrapolated core and numerical diagnostics'):
-    st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are residuals, not physical point values.')
+    st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are extrapolated residuals, not physical point values. They use M₀ ≈ Mᵢ − (4π/3)ρᵢrᵢ³ and L₀ ≈ Lᵢ − (4π/3)ρᵢεᵢrᵢ³. This is a leading-order approximation, not another integration.')
     st.json({k:r['core'][k] for k in ['T','rho','P','epsilon','M','L']})
     st.write({'condition_flag':r['flag'],'integration_error':r['error'],'integrated_shells':len(df)})
     if r['warnings']: st.write(r['warnings'])

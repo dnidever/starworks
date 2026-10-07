@@ -15,8 +15,19 @@ def run_model(mass, luminosity, teff, x, z):
     df['r_fraction'] = df.r / radius
     df['m_fraction'] = df.M / (mass*1.989e33)
     df['l_fraction'] = df.L / (luminosity*3.826e33)
+    core={n:table[-1][n].item() for n in table.dtype.names}
+    # Leading-order central volume integral using the innermost shell's local
+    # density and energy generation, not rho_core=M_shell/volume (which would
+    # force zero residual by construction).
+    candidates=df[(df.r>0)&np.isfinite(df[['r','rho','epsilon','M','L']]).all(axis=1)]
+    if len(candidates):
+        shell=candidates.iloc[0]
+        core_volume=4*np.pi/3*shell.r**3
+        core['M']=float(shell.M-core_volume*shell.rho)
+        core['L']=float(shell.L-core_volume*shell.rho*shell.epsilon)
+        core['Qm']=1-core['M']/(mass*1.989e33)
     return dict(parameters=(mass,luminosity,teff,x,z), flag=int(flag), error=int(error),
-                profile=df, core={n:table[-1][n].item() for n in table.dtype.names},
+                profile=df, core=core,
                 radius=radius, warnings=list(dict.fromkeys(str(w.message) for w in caught)))
 
 EXPLANATIONS = {
