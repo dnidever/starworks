@@ -71,8 +71,9 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         # Heatmaps do not expose point selection in Streamlit. A transparent
         # scatter layer provides selectable trial centers over the same map.
         fig.add_trace(go.Scatter(x=data['Teff (K)'].tolist(),y=data['L (L☉)'].tolist(),mode='markers',
-            marker=dict(symbol='square',size=max(4,min(28,360/max(len(grid['ls']),len(grid['ts']))))),opacity=.01,
-            customdata=data.index.tolist(),showlegend=False,hoverinfo='none',name='Select trial'))
+            marker=dict(symbol='square',size=max(4,min(28,360/max(len(grid['ls']),len(grid['ts']))))),opacity=.05,
+            customdata=data[['Status','r/R','M/M★','L/L★']].values.tolist(),showlegend=False,
+            hovertemplate='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<extra></extra>',name='Select trial'))
         fig.update_layout(clickmode='event+select',dragmode=False)
         chart_key=f"grid_map_{st.session_state.get('grid_generation',0)}"
         def choose_grid_point():
