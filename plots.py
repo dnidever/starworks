@@ -39,7 +39,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     valid_x=np.isfinite(xvalues)&(xvalues>0)
                     xvalues=np.where(valid_x,xvalues,np.nan)
                     y=np.where(valid_x,y,np.nan)
-                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines',name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers',marker=dict(size=3,symbol='circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
                 if show_core and q!='transport':
                     core=model['core']
                     raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
@@ -74,6 +74,18 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
         for k in np.flatnonzero(bad):
             if np.isfinite(xx[k]) and (not log_x or xx[k]>0): fig.add_vline(x=float(xx[k]),line_color='red',line_width=1,row=row,col=col)
         if current['flag']!=0 or current['error']:
+            # Shade the unresolved interior from the innermost valid integrated shell.
+            good=data[(data.r>0)&~bad&np.isfinite(data[coord])]
+            if coord=='r_fraction' and len(good):
+                boundary=float(good.iloc[0][coord])
+                if log_x:
+                    # Zero is outside a log axis: shade to the visible positive lower edge.
+                    candidates=data.loc[(data[coord]>0)&np.isfinite(data[coord]),coord]
+                    lower=float(x_range[0]) if x_range else float(candidates.min())*.8
+                else:
+                    lower=0.0
+                if lower<boundary:
+                    fig.add_vrect(x0=lower,x1=boundary,fillcolor='red',opacity=.16,line_width=0,row=row,col=col)
             positive=data[(data.r>0)&np.isfinite(data[coord]) & ((data[coord]>0) if log_x else True)]
             if len(positive):
                 fig.add_vline(x=float(positive.iloc[0][coord]),line_color='red',line_dash='dash',line_width=2,row=row,col=col)

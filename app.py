@@ -111,7 +111,7 @@ st.caption('Temperature and density are divided by their own positive maxima; ho
 if invalid_shells(df).any():
     st.warning('Red shading and solid red lines mark shells with negative radius, mass, luminosity, opacity or energy generation; nonpositive temperature, pressure or density; or nonfinite values. These are invalid computed values, not a physical stellar region. Nonpositive values are omitted on logarithmic axes. On the mass axis, only lines are used because the coordinate can reverse in failed models.')
 if r['flag']!=0 or r['error']:
-    st.caption('The dashed red line marks the innermost finite positive-radius shell of the failed integration. A core mismatch alone does not mean the entire interior is unphysical.')
+    st.caption('Red inner shading on the radius axis marks the unresolved interior from the last valid shell to the center, not a computed physical region. On a logarithmic axis it extends to the visible lower edge. The dashed red line marks the innermost finite positive-radius shell of the failed integration.')
 if reference and (reference['flag']!=0 or reference['error']):
     st.caption('The comparison is also a failed trial. Red diagnostic markers apply to the current model only.')
 st.caption('The starting surface shells are assumed radiative; transport labels come from the solver.')
