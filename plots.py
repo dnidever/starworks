@@ -49,6 +49,15 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                         core_y=raw_core/pos.max() if len(pos) else np.nan
                     logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2])
                     if np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
+                        if q in ['m_fraction','l_fraction']:
+                            valid_end=np.flatnonzero(np.isfinite(xvalues)&np.isfinite(y))
+                            if len(valid_end):
+                                # A dotted segment distinguishes the extrapolation from integrated shells.
+                                endpoint=valid_end[0]
+                                fig.add_trace(go.Scatter(x=[xvalues[endpoint],core_x],y=[y[endpoint],core_y],
+                                    mode='lines',showlegend=False,name=f'{name}: core connection',
+                                    line=dict(color=['#f59e0b','#38bdf8'][j],dash='dot'),
+                                    hovertemplate='Connection to extrapolated core<extra>'+name+'</extra>'),row=row,col=col)
                         fig.add_trace(go.Scatter(x=[core_x],y=[core_y],mode='markers',showlegend=False,
                             marker=dict(symbol='diamond-open',size=12,color=['#f59e0b','#38bdf8'][j],line=dict(width=2)),
                             name=f'{name}: extrapolated core',customdata=[raw_core],

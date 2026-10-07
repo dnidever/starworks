@@ -88,13 +88,13 @@ x_range=None
 if st.toggle('Limit x-range',value=False):
     cmin,cmax=st.columns(2)
     xmin=cmin.number_input('Minimum x',value=0.001 if log_x else 0.0,format='%.6f')
-    xmax=cmax.number_input('Maximum x',value=0.1,format='%.6f')
+    xmax=cmax.number_input('Maximum x',value=0.3,format='%.6f')
     if not np.isfinite([xmin,xmax]).all() or xmin>=xmax or (log_x and xmin<=0):
         st.error('Use minimum < maximum, with positive bounds for a logarithmic x-axis.')
     else:
         x_range=(xmin,xmax)
 
-show_core=st.toggle('Show extrapolated core point',value=False)
+show_core=st.toggle('Show extrapolated core point',value=True)
 if show_core:
     st.caption('Open diamonds show the extrapolated core. Core mass and luminosity are remaining residuals; opacity and gradient are copied from the last shell. The zero-radius point cannot appear on a logarithmic radius axis.')
 reference=st.session_state.get('reference')
