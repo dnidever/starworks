@@ -53,6 +53,27 @@ st.markdown(
     unsafe_allow_html=True)
 if not passed:
     st.caption(f"Condition flag: {r['flag']} · Integration error: {r['error']}. These profiles describe a failed trial, not an accepted stellar solution.")
+with st.expander('What does “Passed” mean? Core checks explained'):
+    st.markdown("""The solver integrates inward from the surface. To test whether the remaining inner region can form a consistent core, it first requires:
+
+| Quantity at the last integrated shell | Threshold |
+| --- | --- |
+| Fractional radius, r/R | Less than 0.02 (2%) |
+| Remaining mass, Mᵣ/M★ | Less than 0.01 (1%) |
+| Remaining luminosity, Lᵣ/L★ | Less than 0.10 (10%) |
+
+Negative mass or luminosity triggers a separate failure. Reaching the center with too much mass or luminosity remaining also fails.
+
+Once those thresholds are met, the solver checks the extrapolated core:
+
+- **Density:** ρcore = Mᵣ / [(4π/3)r³] must be at least the last shell’s density and no greater than 10 × (ρᵢ/ρᵢ₋₁) × ρᵢ.
+- **Energy generation:** εcore = Lᵣ/Mᵣ must be at least the last shell’s energy generation per unit mass.
+- **Temperature:** the extrapolated central temperature, calculated using the estimated central pressure and ideal-gas relation, must be at least the last shell’s temperature.
+
+**Passed means all these solver checks succeeded without an integration error.** It is not an independent accuracy guarantee. The remaining luminosity is expected to be generated within the unresolved core; a 10% remainder does not automatically mean a 10% error in total luminosity.
+
+The highlighted remaining mass and luminosity above the plots describe the **last integrated shell**. The plotted points at r=0 use a separate leading-order volume extrapolation of the residuals; those plotted residuals are not used for the solver’s acceptance checks.
+""")
 st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
 df=r['profile']; inner=diagnostics(r)
 cols=st.columns(4)
