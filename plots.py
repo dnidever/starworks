@@ -12,7 +12,7 @@ def invalid_shells(data):
     bad &= ~surface
     return np.asarray(bad)
 
-def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None):
+def make_profiles(current, reference, coord, axis, log=False, advanced=False, log_x=False, x_range=None, show_core=False):
     panels=[[('P','Pressure','dyn cm⁻²')],[('kappa','Opacity','cm² g⁻¹')],[('dlnPdlnT','d ln P / d ln T','')]] if advanced else [
         [('T','Temperature','K'),('rho','Density','g cm⁻³')],
         [('m_fraction','Mass fraction',''),('l_fraction','Luminosity fraction','')],
@@ -40,6 +40,19 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     xvalues=np.where(valid_x,xvalues,np.nan)
                     y=np.where(valid_x,y,np.nan)
                 fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines',name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                if show_core and q!='transport':
+                    core=model['core']
+                    raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
+                    core_x=0.0 if coord=='r_fraction' else core['M']/(model['parameters'][0]*1.989e33)
+                    core_y=raw_core
+                    if not advanced and q in ['T','rho']:
+                        core_y=raw_core/pos.max() if len(pos) else np.nan
+                    logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2])
+                    if np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
+                        fig.add_trace(go.Scatter(x=[core_x],y=[core_y],mode='markers',showlegend=False,
+                            marker=dict(symbol='diamond-open',size=12,color=['#f59e0b','#38bdf8'][j],line=dict(width=2)),
+                            name=f'{name}: extrapolated core',customdata=[raw_core],
+                            hovertemplate=f'Extrapolated core: {label}=%{{customdata:.4g}} {unit}<br>{axis}=%{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
         # Radius bands are only meaningful with the radius axis; invalid mass coordinates
         # can fold back on themselves, so use shell markers on that axis.
         data=current['profile']; bad=invalid_shells(data); xx=data[coord].to_numpy()

@@ -94,6 +94,9 @@ if st.toggle('Limit x-range',value=False):
     else:
         x_range=(xmin,xmax)
 
+show_core=st.toggle('Show extrapolated core point',value=False)
+if show_core:
+    st.caption('Open diamonds show the extrapolated core. Core mass and luminosity are remaining residuals; opacity and gradient are copied from the last shell. The zero-radius point cannot appear on a logarithmic radius axis.')
 reference=st.session_state.get('reference')
 c1,c2=st.columns(2)
 if c1.button('Keep current model as comparison'):
@@ -103,8 +106,8 @@ if c2.button('Clear comparison'):
     st.session_state.pop('reference',None)
     reference=None
 from plots import make_profiles, invalid_shells
-st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range),width='stretch')
-st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points are excluded.')
+st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core),width='stretch')
+st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points appear only when enabled.')
 if invalid_shells(df).any():
     st.warning('Red shading and solid red lines mark shells with negative radius, mass, luminosity, opacity or energy generation; nonpositive temperature, pressure or density; or nonfinite values. These are invalid computed values, not a physical stellar region. Nonpositive values are omitted on logarithmic axes. On the mass axis, only lines are used because the coordinate can reverse in failed models.')
 if r['flag']!=0 or r['error']:
@@ -113,14 +116,15 @@ if reference and (reference['flag']!=0 or reference['error']):
     st.caption('The comparison is also a failed trial. Red diagnostic markers apply to the current model only.')
 st.caption('The starting surface shells are assumed radiative; transport labels come from the solver.')
 with st.expander('Advanced plots: pressure, opacity and temperature gradient'):
-    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x,x_range=x_range),width='stretch')
+    st.plotly_chart(make_profiles(r,reference,coord,axis,log,advanced=True,log_x=log_x,x_range=x_range,show_core=show_core),width='stretch')
 with st.expander('Extrapolated core and numerical diagnostics'):
     st.write('These values extrapolate from the last integrated shell. Central mass and luminosity below are residuals, not physical point values.')
     st.json({k:r['core'][k] for k in ['T','rho','P','epsilon','M','L']})
     st.write({'condition_flag':r['flag'],'integration_error':r['error'],'integrated_shells':len(df)})
     if r['warnings']: st.write(r['warnings'])
 with st.expander('Model table and downloads'):
-    st.dataframe(df,width='stretch')
+    display_table=df.rename(columns={'r_fraction':'Fractional radius (r/R)'})
+    st.dataframe(display_table,width='stretch')
     st.download_button('Download integrated shells (CSV)',df.to_csv(index=False),'starmodel_shells.csv','text/csv')
 with st.expander('How to use this in class'):
     st.markdown('Keep a model as a comparison, then change one parameter. Examine where the luminosity rises, where energy transport is convective, and how concentrated the mass is. Adjust luminosity and effective temperature to reduce the remaining central mass and luminosity while meeting the core checks. This simplified solver assumes homogeneous composition and is not an evolutionary model.')
