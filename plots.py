@@ -52,7 +52,8 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     if not advanced and i==0 and q in ['T','P']:
                         core_y=raw_core/pos.max() if len(pos) else np.nan
                     logarithmic_y=log and (advanced and q in ['P','kappa'] or not advanced and (i in [0,2] or i==3 and not density_linear))
-                    if np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
+                    physical_core_value=q not in ['T','P','epsilon'] or raw_core>0
+                    if physical_core_value and np.isfinite(core_x) and np.isfinite(core_y) and (not log_x or core_x>0) and (not logarithmic_y or core_y>0):
                         if q in ['m_fraction','l_fraction']:
                             valid_end=np.flatnonzero(np.isfinite(xvalues)&np.isfinite(y))
                             if len(valid_end):

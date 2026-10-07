@@ -206,6 +206,8 @@ with st.expander('Plot controls',expanded=True):
     if show_core:st.caption('Open diamonds show extrapolated core values. Core mass and luminosity are approximate residuals, not integrated points.')
     if reference:st.caption('Comparison curves are wide and translucent; current curves are thin and dark.')
 st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core,show_points=show_points),width='stretch')
+if show_core and any(r['core'][q]<=0 for q in ['T','P','epsilon']):
+    st.caption('Nonpositive extrapolated core temperature, pressure or energy generation is omitted from these plots because that core estimate is unphysical. Values remain available under numerical diagnostics. Negative mass, luminosity and density diagnostics remain visible.')
 if show_core and r['core']['rho']<=0:
     st.caption('The density panel uses a linear y-axis to show the nonpositive inferred core density in red. Turn off logarithmic x scaling to see the core at r=0.')
 st.caption('Temperature and pressure are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points appear only when enabled.')
