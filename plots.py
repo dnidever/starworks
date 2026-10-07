@@ -22,7 +22,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
     fig=make_subplots(rows=2,cols=2,subplot_titles=titles)
     for i,panel in enumerate(panels):
         row,col=i//2+1,i%2+1
-        for model,name,dash in [(current,'Current','solid'),(reference,'Comparison','dash')]:
+        for model,name,dash in [(reference,'Comparison','solid'),(current,'Current','solid')]:
             if model is None: continue
             data=model['profile']
             for j,(q,label,unit) in enumerate(panel):
@@ -39,7 +39,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                     valid_x=np.isfinite(xvalues)&(xvalues>0)
                     xvalues=np.where(valid_x,xvalues,np.nan)
                     y=np.where(valid_x,y,np.nan)
-                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers',marker=dict(size=5,symbol='circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                fig.add_trace(go.Scatter(x=xvalues,y=y,customdata=raw,mode='lines+markers',opacity=.35 if name=='Comparison' else 1.0,marker=dict(size=4 if name=='Comparison' else 5,symbol='circle-open' if name=='Comparison' else 'circle'),name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=(['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],width=7 if name=='Comparison' else 2,dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
                 if show_core and q!='transport':
                     core=model['core']
                     raw_core=core['M']/(model['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(model['parameters'][1]*3.826e33) if q=='l_fraction' else core[q]
@@ -56,10 +56,12 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                                 endpoint=valid_end[0]
                                 fig.add_trace(go.Scatter(x=[xvalues[endpoint],core_x],y=[y[endpoint],core_y],
                                     mode='lines',showlegend=False,name=f'{name}: core connection',
-                                    line=dict(color=['#f59e0b','#38bdf8'][j],dash='dot'),
+                                    opacity=.35 if name=='Comparison' else 1.0,
+                                    line=dict(color=(['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],width=7 if name=='Comparison' else 2,dash='dot'),
                                     hovertemplate='Connection to extrapolated core<extra>'+name+'</extra>'),row=row,col=col)
                         fig.add_trace(go.Scatter(x=[core_x],y=[core_y],mode='markers',showlegend=False,
-                            marker=dict(symbol='diamond-open',size=12,color=['#f59e0b','#38bdf8'][j],line=dict(width=2)),
+                            opacity=.35 if name=='Comparison' else 1.0,
+                            marker=dict(symbol='diamond-open',size=15 if name=='Comparison' else 12,color=(['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],line=dict(width=2)),
                             name=f'{name}: extrapolated core',customdata=[raw_core],
                             hovertemplate=f'Extrapolated core: {label}=%{{customdata:.4g}} {unit}<br>{axis}=%{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
         if not advanced and i==1:

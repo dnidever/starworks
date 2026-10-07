@@ -105,6 +105,8 @@ if c1.button('Keep current model as comparison'):
 if c2.button('Clear comparison'):
     st.session_state.pop('reference',None)
     reference=None
+if reference:
+    st.caption('Comparison: wide translucent curves with open circles. Current model: thin darker curves with filled circles, drawn on top.')
 from plots import make_profiles, invalid_shells
 st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core),width='stretch')
 st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points appear only when enabled.')
