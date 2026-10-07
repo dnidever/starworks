@@ -53,4 +53,15 @@ def diagnostics(result):
 def explanation(result):
     if result['error']:
         return 'The numerical integration encountered an equation-of-state or intermediate integration error. The integration stopped before establishing a valid core; the condition flag alone does not establish the cause.'
+    if result['flag']==1:
+        shells=result['profile']
+        shells=shells[(shells.r>0)&np.isfinite(shells.rho)&(shells.rho>0)]
+        if len(shells)>=2:
+            inner=float(shells.iloc[0].rho)
+            upper=10*inner*inner/float(shells.iloc[1].rho)
+            core=result['core']['rho']
+            direction='below the last shell density' if core<inner else 'above the allowed upper limit'
+            return (f'The remaining mass and core volume imply a mean core density of {core:.5g} g/cm³, '
+                    f'{direction}. The allowed range is {inner:.5g}–{upper:.5g} g/cm³. '
+                    'Small mass and luminosity residuals alone do not ensure a consistent density profile.')
     return EXPLANATIONS.get(result['flag'], 'The solver returned an unrecognized condition flag.')

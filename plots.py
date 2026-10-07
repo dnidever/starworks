@@ -61,7 +61,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                                     hovertemplate='Connection to extrapolated core<extra>'+name+'</extra>'),row=row,col=col)
                         fig.add_trace(go.Scatter(x=[core_x],y=[core_y],mode='markers',showlegend=False,
                             opacity=.35 if name=='Comparison' else 1.0,
-                            marker=dict(symbol='diamond-open',size=15 if name=='Comparison' else 12,color=(['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],line=dict(width=2)),
+                            marker=dict(symbol='diamond-open',size=15 if name=='Comparison' else 12,color='red' if name=='Current' and q=='rho' and current['flag']==1 else (['#f59e0b','#38bdf8'] if name=='Comparison' else ['#b45309','#0369a1'])[j],line=dict(width=2)),
                             name=f'{name}: extrapolated core',customdata=[raw_core],
                             hovertemplate=f'Extrapolated core: {label}=%{{customdata:.4g}} {unit}<br>{axis}=%{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
         if not advanced and i==1:
@@ -77,14 +77,6 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
                         name=f'{label} became negative',legend='legend2',
                         marker=dict(size=14,color='red',symbol='circle',line=dict(color='white',width=1)),
                         hovertemplate=f'{label} became negative<br>{axis}=%{{x:.5g}}<br>Fraction=%{{y:.5g}}<extra>Invalid shell</extra>'),row=row,col=col)
-                elif show_core and current['flag']!=0:
-                    core=current['core']
-                    value=core['M']/(current['parameters'][0]*1.989e33) if q=='m_fraction' else core['L']/(current['parameters'][1]*3.826e33)
-                    if np.isfinite(value) and value<0 and not log_x:
-                        fig.add_trace(go.Scatter(x=[0],y=[value],mode='markers',
-                            name=f'Negative extrapolated {label.lower()} residual',legend='legend2',
-                            marker=dict(size=14,color='red',line=dict(color='white',width=1)),
-                            hovertemplate=f'Negative extrapolated {label.lower()} residual: %{{y:.5g}}<extra>Core extrapolation</extra>'),row=row,col=col)
         # Radius bands are only meaningful with the radius axis; invalid mass coordinates
         # can fold back on themselves, so use shell markers on that axis.
         data=current['profile']; bad=invalid_shells(data); xx=data[coord].to_numpy()
@@ -117,6 +109,19 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False, lo
             fig.update_yaxes(tickvals=[0,1],ticktext=['Radiative','Convective'],range=[-.1,1.1],row=row,col=col)
         if not advanced and i==3: fig.update_yaxes(title_text='g cm⁻³',row=row,col=col)
         if not advanced and i==2: fig.update_yaxes(title_text='erg g⁻¹ s⁻¹',row=row,col=col)
+    if not advanced and current['flag']==1 and current['error']==0:
+        data=current['profile']
+        shells=data[(data.r>0)&np.isfinite(data.rho)&(data.rho>0)]
+        if len(shells)>=2:
+            rho_inner=float(shells.iloc[0].rho)
+            rho_max=10*rho_inner*rho_inner/float(shells.iloc[1].rho)
+            rho_core=current['core']['rho']
+            relation='below last shell' if rho_core<rho_inner else 'above upper limit'
+            fig.add_annotation(x=fig.layout.xaxis4.domain[0]+.015,
+                y=fig.layout.yaxis4.domain[1]-.025,xref='paper',yref='paper',
+                text=f'Core density mismatch: {rho_core:.4g} g/cm³ ({relation})<br>Allowed: {rho_inner:.4g} to {rho_max:.4g} g/cm³',
+                showarrow=False,xanchor='left',yanchor='top',font=dict(color='#b91c1c',size=11),
+                bgcolor='rgba(255,240,240,0.9)')
     for i in range(len(panels)):
         suffix='' if i==0 else str(i+1)
         xdomain=fig.layout['xaxis'+suffix].domain
