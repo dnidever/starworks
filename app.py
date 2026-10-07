@@ -92,7 +92,7 @@ The highlighted remaining mass and luminosity above the plots describe the **las
 """)
 st.caption('The residuals below describe the innermost finite shell at positive radius. They are not the mass or luminosity of a point at the center.')
 df=r['profile']; inner=diagnostics(r)
-cols=st.columns(4)
+cols=st.columns(5)
 cols[0].metric('Radius (R☉)',f"{r['radius']/6.9599e10:.4g}")
 cols[1].metric('Innermost r/R',f"{inner['r/R']:.4g}")
 previous=st.session_state.get('previous_trial')
@@ -106,12 +106,31 @@ for col,label,key in [(cols[2],'Remaining M/M★','M/M★'),(cols[3],'Remaining 
         direction='↓ smaller' if delta<0 else '↑ larger' if delta>0 else 'unchanged'
         color='#15803d' if delta<0 else '#b91c1c' if delta>0 else '#475569'
         change=f'<div style="font-size:14px;color:{color};margin-top:6px;">|Residual|: {direction} ({delta:+.3g}) vs previous trial</div>'
-    residual_bg='#ecfdf5' if passed else '#fef2f2'
-    residual_border='#bbf7d0' if passed else '#fecaca'
-    residual_color='#166534' if passed else '#991b1b'
+    limit=.01 if key=='M/M★' else .10
+    individual_ok=np.isfinite(value) and 0<=value<limit
+    change+=f'<div style="font-size:13px;margin-top:5px;">{"✓" if individual_ok else "✗"} Required: 0 ≤ value &lt; {limit:g}</div>'
+    residual_bg='#ecfdf5' if individual_ok else '#fef2f2'
+    residual_border='#bbf7d0' if individual_ok else '#fecaca'
+    residual_color='#166534' if individual_ok else '#991b1b'
     with col:
         st.markdown(f'<div style="background:{residual_bg};border:1px solid {residual_border};border-radius:8px;padding:12px;color:{residual_color};">'
                     f'<div style="font-size:14px;">{label}</div><div style="font-size:30px;font-weight:700;">{value:.5g}</div>{change}</div>',unsafe_allow_html=True)
+density_shells=df[(df.r>0)&np.isfinite(df.rho)&(df.rho>0)]
+with cols[4]:
+    if len(density_shells)>=2:
+        rho_last=float(density_shells.iloc[0].rho)
+        rho_upper=10*rho_last*rho_last/float(density_shells.iloc[1].rho)
+        rho_core=float(r['core']['rho'])
+        density_ok=np.isfinite(rho_core) and rho_last<=rho_core<=rho_upper
+        bg='#ecfdf5' if density_ok else '#fef2f2'
+        color='#166534' if density_ok else '#991b1b'
+        border='#bbf7d0' if density_ok else '#fecaca'
+        st.markdown(f'<div style="background:{bg};border:1px solid {border};border-radius:8px;padding:12px;color:{color};">'
+            f'<div style="font-size:14px;">Core density (g/cm³)</div><div style="font-size:30px;font-weight:700;">{rho_core:.5g}</div>'
+            f'<div style="font-size:13px;margin-top:5px;">Last shell: {rho_last:.5g}<br>{"✓" if density_ok else "✗"} Allowed: {rho_last:.5g}–{rho_upper:.5g}</div></div>',unsafe_allow_html=True)
+    else:
+        st.metric('Core density check','Unavailable')
+st.caption('Each box evaluates its own criterion; green individual checks do not by themselves establish that the full model passes.')
 if comparable:
     st.caption(f"Previous trial stopped at r/R={old['r/R']:.4g}; current at {inner['r/R']:.4g}. Smaller absolute residuals alone do not establish improvement when stopping radii differ.")
 st.subheader('Which direction should I try?')
@@ -142,51 +161,48 @@ if tests and tests['parameters']==r['parameters'] and tests['step']==step:
     st.info('If a trial passes the core checks without an integration error, inspect it next. Otherwise, look for a change that improves the residuals at a similar stopping radius. Try that direction with a smaller step, change one parameter at a time, and rerun. If mass and luminosity respond in opposite ways, both surface parameters may need tuning.')
     st.write('Physical clue: negative luminosity means the trial interior used up its luminosity too early; increasing the assumed luminosity is one experiment to test. There is no universal temperature adjustment rule because both inputs change the entire interior.')
 
-a,b=st.columns([3,1])
-with a:
-    axis=st.radio('Horizontal axis',['Fractional radius','Enclosed mass fraction'],horizontal=True)
-with b:
-    log=st.checkbox('Logarithmic positive profiles',value=True)
-log_x=st.toggle('Logarithmic x-axis',value=False)
-if log_x:
-    st.caption('The logarithmic x-axis shows positive coordinates only; zero and negative coordinates are omitted.')
-coord='r_fraction' if axis=='Fractional radius' else 'm_fraction'
-x_range=None
-from plots import invalid_shells
-if not passed and st.toggle('Automatically zoom into failed core',value=True):
-    valid=df[(df.r>0)&~invalid_shells(df)&np.isfinite(df[coord])]
-    if log_x:valid=valid[valid[coord]>0]
-    if len(valid):
-        boundary=float(valid.iloc[0][coord])
-        maximum=min(1.0,3*boundary)
-        minimum=max(boundary*.01,1e-12) if log_x else 0.0
-        if maximum>minimum:
-            x_range=(minimum,maximum)
-            st.caption(f'Automatic core zoom: maximum {axis.lower()} = {maximum:.5g} (up to 3× the last valid shell). Turn off automatic zoom to show the full range; manual limits below override it.')
-if st.toggle('Limit x-range',value=False):
-    cmin,cmax=st.columns(2)
-    xmin=cmin.number_input('Minimum x',value=0.001 if log_x else 0.0,format='%.6f')
-    xmax=cmax.number_input('Maximum x',value=0.3,format='%.6f')
-    if not np.isfinite([xmin,xmax]).all() or xmin>=xmax or (log_x and xmin<=0):
-        st.error('Use minimum < maximum, with positive bounds for a logarithmic x-axis.')
-    else:
-        x_range=(xmin,xmax)
-
-show_points=st.toggle('Show integrated points',value=False)
-show_core=st.toggle('Show extrapolated core point',value=True)
-if show_core:
-    st.caption('Open diamonds show the extrapolated core. Core mass and luminosity are extrapolated residuals using the last shell’s density and energy generation held constant over the remaining core volume; opacity and gradient are copied from the last shell. The zero-radius point cannot appear on a logarithmic radius axis.')
-reference=st.session_state.get('reference')
-c1,c2=st.columns(2)
-if c1.button('Keep current model as comparison'):
-    st.session_state.reference=r
-    reference=r
-if c2.button('Clear comparison'):
-    st.session_state.pop('reference',None)
-    reference=None
-if reference:
-    st.caption('Comparison: wide translucent curves. Current model: thin darker curves, drawn on top. When points are enabled, comparison points are open circles and current points are filled circles.')
 from plots import make_profiles, invalid_shells
+with st.expander('Plot controls',expanded=True):
+    axis_col,y_col,x_col=st.columns([2,1,1])
+    with axis_col:
+        axis=st.radio('Horizontal axis',['Fractional radius','Enclosed mass fraction'],horizontal=True)
+    log=y_col.checkbox('Logarithmic positive profiles',value=True)
+    log_x=x_col.toggle('Logarithmic x-axis',value=False)
+    cauto,climit,cpoints,ccore=st.columns(4)
+    auto_zoom=cauto.toggle('Automatically zoom into failed core',value=True,disabled=passed)
+    manual=climit.toggle('Limit x-range',value=False)
+    show_points=cpoints.toggle('Show integrated points',value=False)
+    show_core=ccore.toggle('Show extrapolated core point',value=True)
+    coord='r_fraction' if axis=='Fractional radius' else 'm_fraction'
+    x_range=None
+    if not passed and auto_zoom:
+        valid=df[(df.r>0)&~invalid_shells(df)&np.isfinite(df[coord])]
+        if log_x:valid=valid[valid[coord]>0]
+        if len(valid):
+            boundary=float(valid.iloc[0][coord])
+            maximum=min(.3,10*boundary)
+            minimum=max(boundary*.01,1e-12) if log_x else 0.0
+            if maximum>minimum:x_range=(minimum,maximum)
+    if manual:
+        cmin,cmax=st.columns(2)
+        xmin=cmin.number_input('Minimum x',value=0.001 if log_x else 0.0,format='%.6f')
+        xmax=cmax.number_input('Maximum x',value=0.3,format='%.6f')
+        if not np.isfinite([xmin,xmax]).all() or xmin>=xmax or (log_x and xmin<=0):
+            st.error('Use minimum < maximum, with positive bounds for a logarithmic x-axis.')
+        else:x_range=(xmin,xmax)
+    ckeep,cclear=st.columns(2)
+    reference=st.session_state.get('reference')
+    if ckeep.button('Keep current model as comparison'):
+        st.session_state.reference=r
+        reference=r
+    if cclear.button('Clear comparison'):
+        st.session_state.pop('reference',None)
+        reference=None
+    if not passed and auto_zoom and not manual and x_range:
+        st.caption(f'Automatic maximum x = {x_range[1]:.5g}: 10× the last valid shell, capped at 0.3.')
+    if log_x:st.caption('Logarithmic axes omit zero and negative coordinates, including the zero-radius core point.')
+    if show_core:st.caption('Open diamonds show extrapolated core values. Core mass and luminosity are approximate residuals, not integrated points.')
+    if reference:st.caption('Comparison curves are wide and translucent; current curves are thin and dark.')
 st.plotly_chart(make_profiles(r,reference,coord,axis,log,log_x=log_x,x_range=x_range,show_core=show_core,show_points=show_points),width='stretch')
 st.caption('Temperature and density are divided by their own positive maxima; hover to see actual values. Comparison models use their own maxima. Extrapolated core points appear only when enabled.')
 if invalid_shells(df).any():
