@@ -31,7 +31,7 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False):
                 if log and (advanced and q in ['P','kappa'] or not advanced and i in [0,2]):
                     y=np.where(y>0,y,np.nan)
                     fig.update_yaxes(type='log',row=row,col=col)
-                fig.add_trace(go.Scatter(x=data[coord],y=y,customdata=raw,mode='lines',name=f'{name}: {label}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
+                fig.add_trace(go.Scatter(x=data[coord],y=y,customdata=raw,mode='lines',name=f'{name}: {label}' if reference else label,legend='legend' if i==0 else f'legend{i+1}',line=dict(color=['#f59e0b','#38bdf8'][j],dash=dash,shape='hv' if q=='transport' else 'linear'),hovertemplate=f'{label}: %{{customdata:.4g}} {unit}<br>{axis}: %{{x:.4g}}<extra>{name}</extra>'),row=row,col=col)
         # Radius bands are only meaningful with the radius axis; invalid mass coordinates
         # can fold back on themselves, so use shell markers on that axis.
         data=current['profile']; bad=invalid_shells(data); xx=data[coord].to_numpy()
@@ -51,5 +51,13 @@ def make_profiles(current, reference, coord, axis, log=False, advanced=False):
         if not advanced and i==3:
             fig.update_yaxes(tickvals=[0,1],ticktext=['Radiative','Convective'],range=[-.1,1.1],row=row,col=col)
         if not advanced and i==2: fig.update_yaxes(title_text='erg g⁻¹ s⁻¹',row=row,col=col)
-    fig.update_layout(height=650 if not advanced else 550,margin=dict(t=60,b=30),hovermode='x unified',legend=dict(orientation='h',y=-.15))
+    for i in range(len(panels)):
+        suffix='' if i==0 else str(i+1)
+        xdomain=fig.layout['xaxis'+suffix].domain
+        ydomain=fig.layout['yaxis'+suffix].domain
+        fig.update_layout(**{'legend'+suffix:dict(
+            x=xdomain[1]-.01,y=ydomain[1]-.015,xanchor='right',yanchor='top',
+            orientation='v',font=dict(size=10),bgcolor='rgba(255,255,255,0.85)',
+            bordercolor='rgba(100,100,100,0.3)',borderwidth=1)})
+    fig.update_layout(height=720 if not advanced else 600,margin=dict(t=60,b=45),hovermode='x unified')
     return fig
