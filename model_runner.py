@@ -2,7 +2,7 @@
 import warnings
 import numpy as np
 import pandas as pd
-from starmodel import starmodel
+from fast_solver import starmodel
 STATUS = {-1:'Maximum shell count reached',0:'Passed solver core checks',1:'Core density mismatch',2:'Core energy generation mismatch',3:'Extrapolated core temperature too low',4:'Negative enclosed mass',5:'Negative luminosity',6:'Center reached with remaining mass or luminosity'}
 def run_model(mass, luminosity, teff, x, z):
     if min(mass, luminosity, teff) <= 0 or not (0 < x < 1 and 0 < z < 1 and x+z < 1):

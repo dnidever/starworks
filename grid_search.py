@@ -4,6 +4,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from model_runner import STATUS,diagnostics
+from fast_grid import grid_summary
+
+@st.cache_data(max_entries=30,show_spinner=False)
+def cached_grid(mass,x,z,ls,ts):
+    return grid_summary(mass,x,z,ls,ts)
 
 def grid_search_ui(calculate, sidebar_parameters, current):
     with st.expander('Grid search in luminosity and temperature',expanded=current is None):
@@ -29,21 +34,17 @@ def grid_search_ui(calculate, sidebar_parameters, current):
             else:
                 ls=np.geomspace(low_l,high_l,int(nl)) if log_l else np.linspace(low_l,high_l,int(nl))
                 ts=np.linspace(low_t,high_t,int(nt))
-                rows=[]; progress=st.progress(0,text='Searching trial models…')
-                for lum in ls:
-                    for temp in ts:
-                        row={'L (L☉)':float(lum),'Teff (K)':float(temp),'Accepted':False,'Flag':-2}
-                        try:
-                            result=calculate(mass,float(lum),float(temp),x,z)
-                            row.update(diagnostics(result))
-                            row['Accepted']=result['flag']==0 and result['error']==0
-                            row['Flag']=result['flag'] if not result['error'] else -2
-                            row['Status']=STATUS.get(result['flag'],'Unknown') if not result['error'] else 'Numerical error'
-                        except Exception as exc:
-                            row['Status']=f'Calculation failed: {exc}'
-                        rows.append(row)
-                        progress.progress(len(rows)/(len(ls)*len(ts)),text=f'Searched {len(rows)} / {len(ls)*len(ts)} trials')
-                progress.empty()
+                rows=[]
+                if not (0<x<1 and 0<z<1 and x+z<1):
+                    st.error('Use positive X and Z with X + Z < 1.')
+                    return
+                with st.spinner('Searching trial models… The first search after a restart may take longer while the solver compiles.'):
+                    results=cached_grid(float(mass),float(x),float(z),ls,ts)
+                for trial_l,trial_t,flag,error,rr,mm,ll in results:
+                    flag=int(flag);error=int(error)
+                    rows.append({'L (L☉)':trial_l,'Teff (K)':trial_t,'Accepted':flag==0 and error==0,
+                                 'Flag':flag if not error else -2,'r/R':rr,'M/M★':mm,'L/L★':ll,
+                                 'Status':STATUS.get(flag,'Unknown') if not error else 'Numerical error'})
                 st.session_state.grid_result=dict(parameters=(mass,x,z),rows=rows,ls=ls,ts=ts,log_l=log_l)
         grid=st.session_state.get('grid_result')
         if not grid:return

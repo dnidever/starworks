@@ -50,3 +50,11 @@ Four default panels combine normalized temperature/density, fractional mass/lumi
 Open Grid search in luminosity and temperature near the top. Set ranges and sample counts (default 15×15, maximum 30×30), optionally use logarithmic luminosity spacing, and run the grid. The status map and downloadable table report solver outcomes and residuals. Select a trial and click Inspect selected grid trial to display its profiles. With a displayed model, the grid holds its mass and composition fixed. Otherwise it uses sidebar mass and composition. Narrow the bounds to refine a promising region.
 
 Limit x-range sets minimum and maximum coordinates for all main and advanced plots; logarithmic bounds must be positive. The artificial surface shell (index 1, maximum radius, zero temperature/pressure/density) is exempt from invalid-shell markers. Interior invalid shells remain marked.
+
+## Numba acceleration
+
+The numerical integration and grid loop compile with Numba. The grid computes compact diagnostics instead of constructing profile tables for every cell; full profiles are built when a trial is inspected. No fastmath, adaptive stepping or physics changes were introduced. The first call after restart has compilation overhead; subsequent calls use compiled code and repeated grids are cached.
+
+Local warm benchmark for 225 models: 4.60 s with the Python reference versus 0.064 s with the compiled grid (about 72×). Deployment hardware and display overhead affect total user-visible time. All flags, shell counts and profile columns matched the reference across 67 test models.
+
+`starmodel.py` remains the reference. `fast_kernel.py` is generated from its numerical functions by `python scripts/build_fast_solver.py`; regenerate and run `python -m unittest discover -s tests` after solver changes. `fast_solver.py` reconstructs profile output; `fast_grid.py` handles compiled grid summaries.
