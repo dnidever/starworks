@@ -63,9 +63,29 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         for i,color in enumerate(colors):scale.extend([(i/9,color),((i+1)/9,color)])
         matrix=data.Flag.to_numpy().reshape(len(grid['ls']),len(grid['ts']))
         display_matrix=np.vectorize({flag:i for i,flag in enumerate(flag_order)}.__getitem__)(matrix)
-        fig=go.Figure(go.Heatmap(x=grid['ts'].tolist(),y=grid['ls'].tolist(),z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
-            customdata=data.Status.to_numpy().reshape(matrix.shape).tolist(),hovertemplate='Teff=%{x:.2f} K<br>L=%{y:.6g} L☉<br>%{customdata}<extra></extra>',
-            colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed'])))
+        map_quantity=st.selectbox('Map coloring',[
+            'Model status','Remaining mass (M/M★)',
+            'Remaining luminosity (L/L★)','Last finite shell radius (r/R)'],
+            key='grid_map_quantity')
+        hover='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<extra></extra>'
+        details=data[['Status','r/R','M/M★','L/L★']].values
+        if map_quantity=='Model status':
+            heatmap_options=dict(z=display_matrix.tolist(),zmin=-.5,zmax=8.5,colorscale=scale,
+                colorbar=dict(tickvals=list(range(9)),ticktext=['Numerical error','Shell limit','Density','Energy generation','Temperature','Negative mass','Negative luminosity','Center mismatch','Passed']))
+        else:
+            column={'Remaining mass (M/M★)':'M/M★',
+                    'Remaining luminosity (L/L★)':'L/L★',
+                    'Last finite shell radius (r/R)':'r/R'}[map_quantity]
+            values=data[column].to_numpy(dtype=float)
+            values=np.where(np.isfinite(values),values,np.nan)
+            heatmap_options=dict(z=values.reshape(matrix.shape).tolist(),colorscale='Viridis',
+                                 colorbar=dict(title=dict(text=column)))
+            if column!='r/R' and np.any(values<0):
+                extent=float(np.nanmax(np.abs(values)))
+                heatmap_options.update(colorscale='RdBu',zmin=-extent,zmax=extent,zmid=0)
+        fig=go.Figure(go.Heatmap(x=grid['ts'].tolist(),y=grid['ls'].tolist(),
+            customdata=details.reshape(*matrix.shape,4).tolist(),hovertemplate=hover,
+            **heatmap_options))
         fig.update_layout(height=560,xaxis_title='Effective temperature (K)',yaxis_title='Luminosity (L☉)')
         if grid['log_l']:fig.update_yaxes(type='log')
         # Heatmaps do not expose point selection in Streamlit. A transparent
@@ -73,7 +93,7 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         fig.add_trace(go.Scatter(x=data['Teff (K)'].tolist(),y=data['L (L☉)'].tolist(),mode='markers',
             marker=dict(symbol='square',size=max(4,min(28,360/max(len(grid['ls']),len(grid['ts']))))),opacity=.05,
             customdata=data[['Status','r/R','M/M★','L/L★']].values.tolist(),showlegend=False,
-            hovertemplate='Teff=%{x:.6f} K<br>L=%{y:.8g} L☉<br>%{customdata[0]}<br>Last shell r/R=%{customdata[1]:.5g}<br>Remaining M/M★=%{customdata[2]:.5g}<br>Remaining L/L★=%{customdata[3]:.5g}<extra></extra>',name='Select trial'))
+            hovertemplate=hover,name='Select trial'))
         fig.update_layout(clickmode='event+select',dragmode=False)
         chart_key=f"grid_map_{st.session_state.get('grid_generation',0)}"
         def choose_grid_point():
@@ -90,7 +110,9 @@ def grid_search_ui(calculate, sidebar_parameters, current):
         with map_column:
             st.plotly_chart(fig,width='stretch',key=chart_key,on_select=choose_grid_point,selection_mode='points')
         st.caption('Click a trial center on the map to load its luminosity and temperature into the sidebar as your next guess, then click Run model. The displayed model stays unchanged until you run it.')
-        st.caption('Green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
+        if map_quantity!='Model status':
+            st.caption('Colors show the signed last finite shell value as a fraction of the total stellar mass, luminosity, or radius. Missing values appear as gaps. Hover to see each model’s status and diagnostics.')
+        st.caption('In the Model status view, green cells passed the core checks. A coarse grid may miss a narrow solution region: reduce the bounds and search again. Inspect residuals and stopping radius before accepting a model.')
         matches=data[data.Accepted].copy()
         if len(matches):
             st.subheader('Passing models')
